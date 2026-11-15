@@ -1,0 +1,363 @@
+{
+  "metadata": {
+    "skill_name": "irrigation-calc-reference",
+    "skill_path": "<path/to/skill>",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-11-15T09:07:42Z",
+    "evals_run": [
+      1,
+      2,
+      3
+    ],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "time_seconds": 15.9,
+        "tokens": 36248,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Reports TAW = 72 mm",
+          "passed": true,
+          "evidence": "TAW = 72.0 mm"
+        },
+        {
+          "text": "Adjusts p for ETc (p = 0.30 + 0.04 x (5 - ETc) = 0.248) instead of using the table p of 0.30 unchanged",
+          "passed": true,
+          "evidence": "p = 0.248 via 0.30+0.04(5-6.3)"
+        },
+        {
+          "text": "Reports RAW of about 17.9 mm (not 21.6)",
+          "passed": true,
+          "evidence": "RAW 17.86 mm"
+        },
+        {
+          "text": "Reports Ks of about 0.78 (0.77-0.78)",
+          "passed": true,
+          "evidence": "Ks 0.776"
+        },
+        {
+          "text": "Reports stressed ETc of about 4.9 mm/day",
+          "passed": true,
+          "evidence": "Stressed ETc 4.89"
+        },
+        {
+          "text": "Reports end-of-day depletion of about 34.9 mm and recommends irrigating about 34.9 mm net",
+          "passed": true,
+          "evidence": "Dr 34.89, irrigate 34.89 mm net"
+        },
+        {
+          "text": "States the assumption about which depletion value (start-of-day) feeds Ks and which Kc mid (1.05) and p (0.30) were used",
+          "passed": true,
+          "evidence": "Assumptions list start-of-day Dr, Kc mid 1.05, p adjusted with unstressed ETc"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 22.6,
+        "tokens": 40999,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Uses Table 11 Mediterranean tomato stage lengths 30/40/45/30 days and places day 100 in the mid-season stage",
+          "passed": true,
+          "evidence": "30/40/45/30; day 100 mid (71-115)"
+        },
+        {
+          "text": "Uses tabulated Kc mid = 1.15 for tomato",
+          "passed": true,
+          "evidence": "Kc mid 1.15"
+        },
+        {
+          "text": "Applies the Eq. 62 climate adjustment, giving an adjusted Kc mid of about 1.20 (1.19-1.21) using h = 0.6 m",
+          "passed": true,
+          "evidence": "Eq. 62 -> 1.199"
+        },
+        {
+          "text": "Reports ETc of about 6.6 mm/day (6.5-6.7)",
+          "passed": true,
+          "evidence": "ETc 6.60"
+        },
+        {
+          "text": "Does not multiply Kc mid by the wetted fraction fw (fw only scales Kc ini)",
+          "passed": true,
+          "evidence": "Explicitly leaves Kc mid unscaled by fw=0.4"
+        },
+        {
+          "text": "Cites FAO-56 equation or table numbers for the values used",
+          "passed": true,
+          "evidence": "Cites Table 11, Table 12, Eq. 56/58, 60, 62"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 3,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 21.3,
+        "tokens": 41503,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Identifies the Table 11 Europe/Mediterranean sweet pepper row with development 35, mid 40 and late 20 days",
+          "passed": true,
+          "evidence": "Europe/Mediterranean row, 35/40/20 plus init"
+        },
+        {
+          "text": "Flags that the initial stage length is printed as 25/30 and states which one it chose",
+          "passed": true,
+          "evidence": "Flags 25/30; chose 30 because 30+35+40+20 = 125 matches printed total"
+        },
+        {
+          "text": "Uses Kc mid = 1.05 and Kc end = 0.90 for bell pepper (Table 12)",
+          "passed": true,
+          "evidence": "Kc mid 1.05, Kc end 0.90"
+        },
+        {
+          "text": "Notes that Kc ini for pepper comes from the Solanum group value of 0.6 (per-crop cell is blank) or otherwise flags the Kc ini source",
+          "passed": true,
+          "evidence": "Uses Solanum group 0.6 because pepper cell is blank"
+        },
+        {
+          "text": "Gives Kc on day 20 equal to Kc ini (flat during the initial stage)",
+          "passed": true,
+          "evidence": "Day 20 Kc 0.60"
+        },
+        {
+          "text": "Gives Kc on day 50 by linear interpolation in the development stage consistent with the chosen initial length (about 0.92 for init 25 or 0.86 for init 30 with Kc ini 0.6, Kc mid 1.05, development 35 days)",
+          "passed": true,
+          "evidence": "Day 50 0.857"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "time_seconds": 16.3,
+        "tokens": 34235,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Reports TAW = 72 mm",
+          "passed": true,
+          "evidence": "TAW 72.0 mm"
+        },
+        {
+          "text": "Adjusts p for ETc (p = 0.30 + 0.04 x (5 - ETc) = 0.248) instead of using the table p of 0.30 unchanged",
+          "passed": true,
+          "evidence": "p adjusted to 0.248"
+        },
+        {
+          "text": "Reports RAW of about 17.9 mm (not 21.6)",
+          "passed": true,
+          "evidence": "RAW 17.9 mm"
+        },
+        {
+          "text": "Reports Ks of about 0.78 (0.77-0.78)",
+          "passed": true,
+          "evidence": "Ks 0.776"
+        },
+        {
+          "text": "Reports stressed ETc of about 4.9 mm/day",
+          "passed": true,
+          "evidence": "4.89 mm"
+        },
+        {
+          "text": "Reports end-of-day depletion of about 34.9 mm and recommends irrigating about 34.9 mm net",
+          "passed": true,
+          "evidence": "34.9 mm; ~35 mm net"
+        },
+        {
+          "text": "States the assumption about which depletion value (start-of-day) feeds Ks and which Kc mid (1.05) and p (0.30) were used",
+          "passed": true,
+          "evidence": "States start-of-day Dr, Kc mid 1.05, p 0.30 table value"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8333333333333334,
+        "passed": 5,
+        "failed": 1,
+        "total": 6,
+        "time_seconds": 24.4,
+        "tokens": 35283,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Uses Table 11 Mediterranean tomato stage lengths 30/40/45/30 days and places day 100 in the mid-season stage",
+          "passed": false,
+          "evidence": "Recalled 35/45/70/30 (180 d); the correct Table 11 Mediterranean row is 30/40/45/30. Agent admits it is unsure"
+        },
+        {
+          "text": "Uses tabulated Kc mid = 1.15 for tomato",
+          "passed": true,
+          "evidence": "Kc mid 1.15"
+        },
+        {
+          "text": "Applies the Eq. 62 climate adjustment, giving an adjusted Kc mid of about 1.20 (1.19-1.21) using h = 0.6 m",
+          "passed": true,
+          "evidence": "Eq. 62 -> 1.199"
+        },
+        {
+          "text": "Reports ETc of about 6.6 mm/day (6.5-6.7)",
+          "passed": true,
+          "evidence": "ETc 6.6"
+        },
+        {
+          "text": "Does not multiply Kc mid by the wetted fraction fw (fw only scales Kc ini)",
+          "passed": true,
+          "evidence": "Did not scale Kc by fw (reasoning given)"
+        },
+        {
+          "text": "Cites FAO-56 equation or table numbers for the values used",
+          "passed": true,
+          "evidence": "Cites Tables 11/12 and Eq. 62, though from memory"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 3,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.5,
+        "passed": 3,
+        "failed": 3,
+        "total": 6,
+        "time_seconds": 19.2,
+        "tokens": 32115,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Identifies the Table 11 Europe/Mediterranean sweet pepper row with development 35, mid 40 and late 20 days",
+          "passed": true,
+          "evidence": "25/35/40/20 row identified"
+        },
+        {
+          "text": "Flags that the initial stage length is printed as 25/30 and states which one it chose",
+          "passed": false,
+          "evidence": "Did not flag the 25/30 ambiguity; reports 120 days total while the table prints 125"
+        },
+        {
+          "text": "Uses Kc mid = 1.05 and Kc end = 0.90 for bell pepper (Table 12)",
+          "passed": false,
+          "evidence": "Kc end 0.80 chosen from memory; table value is 0.90"
+        },
+        {
+          "text": "Notes that Kc ini for pepper comes from the Solanum group value of 0.6 (per-crop cell is blank) or otherwise flags the Kc ini source",
+          "passed": false,
+          "evidence": "Kc ini 0.60 with no source note"
+        },
+        {
+          "text": "Gives Kc on day 20 equal to Kc ini (flat during the initial stage)",
+          "passed": true,
+          "evidence": "Day 20 Kc 0.60"
+        },
+        {
+          "text": "Gives Kc on day 50 by linear interpolation in the development stage consistent with the chosen initial length (about 0.92 for init 25 or 0.86 for init 30 with Kc ini 0.6, Kc mid 1.05, development 35 days)",
+          "passed": true,
+          "evidence": "Day 50 0.921 (consistent with init 25)"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 19.9333,
+        "stddev": 3.5529,
+        "min": 15.9,
+        "max": 22.6
+      },
+      "tokens": {
+        "mean": 39583.3333,
+        "stddev": 2899.4552,
+        "min": 36248,
+        "max": 41503
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.7778,
+        "stddev": 0.2546,
+        "min": 0.5,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 19.9667,
+        "stddev": 4.1041,
+        "min": 16.3,
+        "max": 24.4
+      },
+      "tokens": {
+        "mean": 33877.6667,
+        "stddev": 1613.9459,
+        "min": 32115,
+        "max": 35283
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.22",
+      "time_seconds": "-0.0",
+      "tokens": "+5706"
+    }
+  },
+  "notes": []
+}

@@ -1,0 +1,30 @@
+{
+  "expectations": [
+    {
+      "text": "Root depth is 0.5 m and TAW = 100 mm",
+      "passed": false,
+      "evidence": "Root depth 0.7 m (0.5 only as an option); TAW 140"
+    },
+    {
+      "text": "Trigger level is 50 mm (half of the bucket)",
+      "passed": false,
+      "evidence": "Trigger 30 mm (p = 0.30)"
+    },
+    {
+      "text": "Stage lengths are 30/35/40/20 days",
+      "passed": false,
+      "evidence": "25/35/40/20, 120 days"
+    },
+    {
+      "text": "Kc ini 0.6, Kc mid 1.05 and Kc end 0.90",
+      "passed": true,
+      "evidence": "0.60 / 1.05 / 0.90"
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "failed": 3,
+    "total": 4,
+    "pass_rate": 0.25
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "expectations": [
+    {
+      "text": "Identifies the Table 11 Europe/Mediterranean sweet pepper row with development 35, mid 40 and late 20 days",
+      "passed": true,
+      "evidence": "25/35/40/20 row identified"
+    },
+    {
+      "text": "Flags that the initial stage length is printed as 25/30 and states which one it chose",
+      "passed": false,
+      "evidence": "Did not flag the 25/30 ambiguity; reports 120 days total while the table prints 125"
+    },
+    {
+      "text": "Uses Kc mid = 1.05 and Kc end = 0.90 for bell pepper (Table 12)",
+      "passed": false,
+      "evidence": "Kc end 0.80 chosen from memory; table value is 0.90"
+    },
+    {
+      "text": "Notes that Kc ini for pepper comes from the Solanum group value of 0.6 (per-crop cell is blank) or otherwise flags the Kc ini source",
+      "passed": false,
+      "evidence": "Kc ini 0.60 with no source note"
+    },
+    {
+      "text": "Gives Kc on day 20 equal to Kc ini (flat during the initial stage)",
+      "passed": true,
+      "evidence": "Day 20 Kc 0.60"
+    },
+    {
+      "text": "Gives Kc on day 50 by linear interpolation in the development stage consistent with the chosen initial length (about 0.92 for init 25 or 0.86 for init 30 with Kc ini 0.6, Kc mid 1.05, development 35 days)",
+      "passed": true,
+      "evidence": "Day 50 0.921 (consistent with init 25)"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 3,
+    "total": 6,
+    "pass_rate": 0.5
+  }
+}

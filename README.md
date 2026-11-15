@@ -46,6 +46,14 @@ uv run uvicorn main:app --host 127.0.0.1 --port 8080
 - Health check: http://127.0.0.1:8080/health → `{"status": "ok"}`
 - Interactive API docs: http://127.0.0.1:8080/docs
 
+## Run everything
+
+```bash
+bash scripts/run-all.sh
+```
+
+Starts registry (8000), weather (8001), planner (8002) and the frontend (3000), wired to each other. Open http://localhost:3000. Ctrl-C stops all four. Log lines carry the service name. Missing `.env` files are created from `.env.example` (the frontend uses `.env.local`), and the script refuses to start if a port is taken. Change ports with `REGISTRY_PORT`, `WEATHER_PORT`, `PLANNER_PORT` and `FRONTEND_PORT`. Requirements: `uv`, Node.js, `curl` and `ss`. The weather service calls Open-Meteo, so it needs internet.
+
 ## Database
 
 The service uses SQLite by default (`registry.db` next to the code) and PostgreSQL 12 or later in production. The `DATABASE_URL` setting chooses the database. It is read from the process environment first, then from a `.env` file in `services/registry-service` (`.env` is gitignored). Supported URLs:
