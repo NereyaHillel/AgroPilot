@@ -132,14 +132,18 @@ def order_by_name(conn: Conn) -> str:
     return "ORDER BY name, id"
 
 
-def sqlalchemy_url(url: str) -> str:
+def sqlalchemy_url(url: str) -> str | sqlalchemy.URL:
     if url.startswith("sqlite:"):
         if not url.startswith("sqlite:///"):
             raise ValueError(f"SQLite DATABASE_URL must start with sqlite:///, got {url!r}")
         path = Path(url.removeprefix("sqlite:///"))
         path = path if path.is_absolute() else config.SERVICE_DIR / path
         # mode=rw: a missing file must fail, not be silently created as an empty database.
-        return f"sqlite:///file:{path}?mode=rw&uri=true"
+        # Built as an object, not a string: SQLAlchemy would percent-decode the path in a string
+        # URL, and as_uri() encodes characters such as # and ? that SQLite would read as URI syntax.
+        return sqlalchemy.URL.create(
+            "sqlite", database=path.as_uri(), query={"mode": "rw", "uri": "true"}
+        )
     scheme, _, rest = url.partition("://")
     if scheme in ("postgresql", "postgres"):
         return f"postgresql+psycopg://{rest}"
@@ -151,8 +155,10 @@ def engine_for(url: str, lock_timeout: str, statement_timeout: str) -> sqlalchem
     # Autocommit: write_transaction issues its own BEGIN, so the lock is taken exactly when asked.
     # NullPool: one connection per request, as before. The timeouts are part of the cache key.
     sa_url = sqlalchemy_url(url)
-    if sa_url.startswith("sqlite"):
-        engine = sqlalchemy.create_engine(sa_url, poolclass=NullPool, isolation_level="AUTOCOMMIT")
+    if url.startswith("sqlite:"):
+        engine = sqlalchemy.create_engine(
+            sa_url, poolclass=NullPool, isolation_level="AUTOCOMMIT", hide_parameters=True
+        )
 
         @event.listens_for(engine, "connect")
         def _foreign_keys_on(dbapi_connection, _record) -> None:
@@ -164,6 +170,7 @@ def engine_for(url: str, lock_timeout: str, statement_timeout: str) -> sqlalchem
         sa_url,
         poolclass=NullPool,
         isolation_level="AUTOCOMMIT",
+        hide_parameters=True,
         connect_args={
             "connect_timeout": PG_CONNECT_TIMEOUT_SECONDS,
             "options": f"-c lock_timeout={lock_timeout} -c statement_timeout={statement_timeout}",

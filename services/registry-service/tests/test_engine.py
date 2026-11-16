@@ -61,3 +61,46 @@ def test_engine_is_cached_per_url_and_timeouts(tmp_path: Path):
     assert isinstance(first, sqlalchemy.Engine)
     assert db.engine_for(url, "5s", "30s") is first
     assert db.engine_for(url, "100ms", "30s") is not first
+
+
+@pytest.mark.sqlite_only
+@pytest.mark.parametrize("folder", ["a#b", "q?x", "p%41"])
+def test_sqlite_path_with_special_characters_opens_the_existing_file(
+    seeded_db: Path, tmp_path: Path, folder: str
+):
+    target = tmp_path / folder
+    target.mkdir()
+    (target / "registry.db").write_bytes(seeded_db.read_bytes())
+
+    conn = db.connect(target / "registry.db")
+    try:
+        assert conn.exec_driver_sql("SELECT count(*) FROM farms").scalar() == 2
+    finally:
+        conn.close()
+
+
+@pytest.mark.sqlite_only
+@pytest.mark.parametrize("folder", ["a#b", "q?x"])
+def test_missing_sqlite_file_in_special_folder_is_not_created(tmp_path: Path, folder: str):
+    (tmp_path / folder).mkdir()
+
+    with pytest.raises(exc.OperationalError):
+        db.connect(tmp_path / folder / "x.db")
+
+    assert sorted(p.name for p in tmp_path.iterdir()) == [folder]
+    assert list((tmp_path / folder).iterdir()) == []
+
+
+@pytest.mark.sqlite_only
+def test_database_errors_do_not_expose_bound_parameters(seeded_db: Path):
+    conn = db.connect(seeded_db)
+    try:
+        with pytest.raises(exc.IntegrityError) as caught:
+            conn.execute(
+                sqlalchemy.text("INSERT INTO farms (id, name) VALUES (:id, :name)"),
+                {"id": "b7e2c0a0-3c1d-4f0a-9a11-0c5d2e6f1001", "name": "SECRET-NAME"},
+            )
+    finally:
+        conn.close()
+
+    assert "SECRET-NAME" not in str(caught.value)
