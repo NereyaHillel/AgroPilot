@@ -1,3 +1,4 @@
+import functools
 import re
 import sqlite3
 from collections.abc import Iterator
@@ -6,9 +7,12 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import psycopg
+import sqlalchemy
 from fastapi import Depends, Request
 from psycopg.pq import TransactionStatus
 from psycopg.rows import dict_row
+from sqlalchemy import event, exc as sa_exc
+from sqlalchemy.pool import NullPool
 
 import config
 
@@ -132,7 +136,13 @@ def write_transaction(conn: Conn) -> Iterator[None]:
     conn.execute("COMMIT")
 
 
+def underlying(exc: Exception) -> Exception:
+    # SQLAlchemy wraps the driver's error; the classifiers below read the original.
+    return exc.orig if isinstance(exc, sa_exc.DBAPIError) and exc.orig is not None else exc
+
+
 def is_unavailable(exc: Exception) -> bool:
+    exc = underlying(exc)
     if isinstance(exc, sqlite3.Error):
         return getattr(exc, "sqlite_errorname", None) in UNAVAILABLE_SQLITE_ERRORS
     if not isinstance(exc, psycopg.Error):
@@ -148,12 +158,14 @@ def is_unavailable(exc: Exception) -> bool:
 
 
 def is_unique_violation(exc: Exception) -> bool:
+    exc = underlying(exc)
     if isinstance(exc, sqlite3.IntegrityError):
         return exc.sqlite_errorname == "SQLITE_CONSTRAINT_UNIQUE"
     return isinstance(exc, psycopg.errors.UniqueViolation)
 
 
 def is_foreign_key_violation(exc: Exception) -> bool:
+    exc = underlying(exc)
     if isinstance(exc, sqlite3.IntegrityError):
         return exc.sqlite_errorname == "SQLITE_CONSTRAINT_FOREIGNKEY"
     return isinstance(exc, psycopg.errors.ForeignKeyViolation)
@@ -164,3 +176,51 @@ def order_by_name(conn: Conn) -> str:
     if isinstance(conn, PgConnection):
         return 'ORDER BY name COLLATE "C", id COLLATE "C"'
     return "ORDER BY name, id"
+
+
+def sqlalchemy_url(url: str) -> str:
+    if url.startswith("sqlite:"):
+        if not url.startswith("sqlite:///"):
+            raise ValueError(f"SQLite DATABASE_URL must start with sqlite:///, got {url!r}")
+        path = Path(url.removeprefix("sqlite:///"))
+        path = path if path.is_absolute() else config.SERVICE_DIR / path
+        # mode=rw: a missing file must fail, not be silently created as an empty database.
+        return f"sqlite:///file:{path}?mode=rw&uri=true"
+    scheme, _, rest = url.partition("://")
+    if scheme in ("postgresql", "postgres"):
+        return f"postgresql+psycopg://{rest}"
+    return url
+
+
+@functools.cache
+def engine_for(url: str, lock_timeout: str, statement_timeout: str) -> sqlalchemy.Engine:
+    # Autocommit: write_transaction issues its own BEGIN, so the lock is taken exactly when asked.
+    # NullPool: one connection per request, as before. The timeouts are part of the cache key.
+    sa_url = sqlalchemy_url(url)
+    if sa_url.startswith("sqlite"):
+        engine = sqlalchemy.create_engine(sa_url, poolclass=NullPool, isolation_level="AUTOCOMMIT")
+
+        @event.listens_for(engine, "connect")
+        def _foreign_keys_on(dbapi_connection, _record) -> None:
+            # SQLite does not enforce foreign keys unless this is set on each connection.
+            dbapi_connection.execute("PRAGMA foreign_keys = ON")
+
+        return engine
+    return sqlalchemy.create_engine(
+        sa_url,
+        poolclass=NullPool,
+        isolation_level="AUTOCOMMIT",
+        connect_args={
+            "connect_timeout": PG_CONNECT_TIMEOUT_SECONDS,
+            "options": f"-c lock_timeout={lock_timeout} -c statement_timeout={statement_timeout}",
+        },
+    )
+
+
+def sa_connect_url(url: str) -> sqlalchemy.Connection:
+    # The module constants are read here, at call time, because tests change them.
+    return engine_for(url, PG_LOCK_TIMEOUT, PG_STATEMENT_TIMEOUT).connect()
+
+
+def sa_connect(path: Path = DB_PATH) -> sqlalchemy.Connection:
+    return sa_connect_url(f"sqlite:///{path}")
