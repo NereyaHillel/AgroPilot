@@ -5,7 +5,7 @@ The system of record for AgroPilot: **farms** and **plots** (area, crop, plantin
 ## Tech stack
 
 - Python 3.12, FastAPI, Pydantic v2
-- SQLite (`registry.db`) by default, PostgreSQL in production (psycopg 3), chosen by `DATABASE_URL`
+- SQLite (`registry.db`) by default, PostgreSQL in production (psycopg 3), chosen by `DATABASE_URL`. All data access goes through SQLAlchemy Core
 - [uv](https://docs.astral.sh/uv/) for dependencies
 - pytest for tests, Locust for load tests
 
@@ -15,9 +15,9 @@ The system of record for AgroPilot: **farms** and **plots** (area, crop, plantin
 routers/                  HTTP endpoints (farms, plots, catalogues)
 schemas.py                Request/response models and validation
 repository.py             SQL queries
-db.py                     Connections and transactions
+db.py                     SQLAlchemy engines, connections and transactions
 errors.py                 RFC 9457 error responses
-config.py                 Reads DATABASE_URL
+config.py                 Reads DATABASE_URL (pydantic-settings)
 seed_registry.sh          Builds registry.db (SQLite) with sample data
 seed_registry_pg.py       Creates and seeds the registry tables in PostgreSQL
 docker-compose.test.yml   Throwaway PostgreSQL for tests
@@ -97,9 +97,9 @@ Each test drops and reseeds the registry tables in that database, so the databas
 
 ## Performance
 
-`GET` requests must have a p95 latency of at most 100 ms at 10 requests per second. Measured with Locust on the seeded data: **p95 = 20 ms, 0 failures** on SQLite and **p95 = 76 ms, 0 failures** on PostgreSQL (60 s at 10 requests per second).
+`GET` requests must have a p95 latency of at most 100 ms at 10 requests per second. Measured with Locust on the seeded data: **p95 = 40 ms, 0 failures** on SQLite and **p95 = 71 ms, 0 failures** on PostgreSQL (after the move to SQLAlchemy) (60 s at 10 requests per second).
 
-The PostgreSQL figure was measured against a database in a local Docker container. Most of it is the cost of opening a new connection for every request. A remote database, especially over TLS, adds network round trips to each of those connections, so latency there will be higher. If p95 exceeds 100 ms in that setup, the next step is a connection pool (`psycopg_pool`).
+The PostgreSQL figure was measured against a database in a local Docker container. Most of it is the cost of opening a new connection for every request. A remote database, especially over TLS, adds network round trips to each of those connections, so latency there will be higher. If p95 exceeds 100 ms in that setup, the next step is a connection pool (SQLAlchemy's `QueuePool`; the engines use `NullPool` today).
 
 ## More
 

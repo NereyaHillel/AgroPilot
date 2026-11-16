@@ -14,7 +14,7 @@
 | **Soils** | Platform (read-only) | `sand`, `loam`, `clay-loam`, each with `available_water_mm_per_m`, the depth of water the soil holds for plants |
 | **Emitters** | Platform (read-only) | DripNet PC drippers with `flow_lph` from 0.6 to 2.0 L/h |
 
-**Why these fields matter to the business:** together they describe a plot's water situation. The soil says how much water the root zone can store. The emitter flow and the spacing say how fast the drip system applies water: `flow_lph / (row_spacing_m × emitter_spacing_m)` = mm/h, so 1.0 L/h on 1.5 m × 0.4 m ≈ 1.67 mm/h. The crop and planting date give the growth stage, and the location links the plot to weather data. Later services (irrigation planning, AI recommendations) will read this data, so bad data here produces bad advice downstream. That is why the spec puts so much weight on validation. *(The downstream use is my reading of the data model. P1 itself does not include it.)*
+**Why these fields matter to the business:** together they describe a plot's water situation. The soil says how much water the root zone can store. The emitter flow and the spacing say how fast the drip system applies water: `flow_lph / (row_spacing_m × emitter_spacing_m)` = mm/h, so 1.0 L/h on 1.5 m × 0.4 m ≈ 1.67 mm/h. The crop and planting date give the growth stage, and the location links the plot to weather data. The weather and planner services read this data over HTTP (the planner takes the plot, its soil and its emitter from here), so bad data here produces a wrong irrigation plan. That is why the spec puts so much weight on validation. *(Neither service is part of P1. This service knows nothing about weather or irrigation.)*
 
 ## 2. The assignment (P1 spec in short)
 
@@ -27,26 +27,26 @@
 | **NFR-1.1** | `GET` list / by id: **p95 ≤ 100 ms at 10 RPS**. Measure it and report the number |
 | Data | Return **only** the listed fields. Plot names are unique within a farm. Lists are JSON arrays, and an empty list is `200 []` |
 | Storage | SQLite locally and in tests, PostgreSQL in production, chosen by `DATABASE_URL`. SQLite is one file, `registry.db`, built by the supplied `seed_registry.sh`; PostgreSQL is set up by `seed_registry_pg.py` (15 rows: 2 crops, 3 soils, 4 emitters, 2 farms, 4 plots) |
-| Docs | A service README and `docs/judgment-log.md` with at least 2 entries (what the AI agent suggested, what I decided, why) |
+| Docs | A service README and a judgment log with at least 2 entries (what the AI agent suggested, what I decided, why). The decisions are recorded in §7 below, because `docs/judgment-log.md` no longer exists |
 
 ## 3. Requirement → implementation map
 
 | Req | Where it lives | Status |
 | --- | --- | --- |
-| FR-1.1 | `routers/farms.py`, `routers/plots.py`, `repository.py` | Done. 201 / 200 / 204 as specified, PATCH is partial, `?farm_id=` filter |
+| FR-1.1 | `routers/farms.py`, `routers/plots.py`, `repository.py` | Done. 201 / 200 / 204 as specified, PATCH is partial, `?farm_id=` filter. Beyond the spec: `GET /v1/farms/{id}/area` returns the sum of the farm's plot areas |
 | FR-1.2 | `routers/catalogues.py` (GET routes only). 405 handling in `errors.py` | Done. 405 includes an `Allow` header |
 | FR-1.3 | `schemas.py` (Pydantic types) + `_check_references` in `routers/plots.py` | Done, plus stricter rules (see §6) |
 | FR-1.4 | `errors.py`: exception hierarchy + handlers for every error source | Done. Framework errors (404 route, 405, bad JSON) are covered too |
-| NFR-1.1 | `scripts/locustfile.py`, results in the service README | **p95 = 20 ms**, 0 failures, 9.65 RPS (5-minute run) |
+| NFR-1.1 | `scripts/locustfile.py`, results in the service README | **p95 = 40 ms** on SQLite, 71 ms on PostgreSQL, 0 failures (see §9) |
 | Only listed fields | `response_model=` on every route | Tested (`..._returns_201_with_only_spec_fields`) |
-| Docs | `services/registry-service/README.md`, `docs/judgment-log.md` (4 entries) | Done |
+| Docs | `services/registry-service/README.md`, `services/registry-service/OVERVIEW.md`, and §7 of this file for the decisions | Done |
 
 ## 4. Tech stack
 
 - **Python 3.12**, **FastAPI 0.115** + **Pydantic v2**, **uvicorn**
-- **SQLite** (default, local and tests) through the standard `sqlite3` module, or **PostgreSQL** (production) through `psycopg`, chosen by `DATABASE_URL`; **no ORM**
+- **SQLite** (default, local and tests) or **PostgreSQL** (production), chosen by `DATABASE_URL`. All access goes through **SQLAlchemy Core** (no ORM) with the `sqlite3` and `psycopg` drivers; settings use `pydantic-settings`
 - **uv** for environment and dependencies
-- **pytest** + FastAPI `TestClient`: **186 tests**; 174 run and pass on SQLite and 183 on PostgreSQL (the rest are backend-specific and skipped)
+- **pytest** + FastAPI `TestClient`: **204 tests**; 192 run and pass on SQLite and 12 PostgreSQL-only tests are skipped unless `TEST_DATABASE_URL` points at a PostgreSQL database
 - **Locust** (run through `uvx`, so it is not a project dependency) for NFR-1.1
 
 ## 5. Architecture
@@ -60,6 +60,7 @@ routers/  farms.py · plots.py · catalogues.py   ← HTTP: status codes, transa
    ├── repository.py  ← all SQL; maps database constraint errors to API errors
    ├── db.py          ← per-request connection (FastAPI dependency) + write_transaction()
    └── errors.py      ← RFC 9457 problem documents for every failure (FR-1.4)
+config.py             ← resolves DATABASE_URL (environment, then .env, then registry.db) and fails fast on a bad value
 main.py               ← creates the app, registers error handlers, includes routers, GET /health
 ```
 
@@ -75,7 +76,7 @@ plots(id PK, farm_id FK→farms, name, area_m2, crop_id FK→crops, planting_dat
 crops(id, name) · soils(id, name, available_water_mm_per_m) · emitters(id, name, flow_lph)
 ```
 
-The schema was given, and the service **never creates tables**. The `UNIQUE(farm_id, name)` and foreign keys in it are the database-level guarantee for the spec's uniqueness and catalogue rules.
+The schema was given, and the service **never creates tables** (`seed_registry.sh` and `seed_registry_pg.py` do). The `UNIQUE(farm_id, name)` and foreign keys in it are the database-level guarantee for the spec's uniqueness and catalogue rules.
 
 ## 6. Key implementation points
 
@@ -91,11 +92,12 @@ Longitude      = Annotated[float, Field(ge=-180, le=180, strict=True, allow_inf_
 PlantingDate   = Annotated[date,  AfterValidator(_not_in_future)]      # "today" = UTC
 ```
 
-These go further than the spec, and each choice is in the judgment log:
+These go further than the spec, and each choice is listed in §7:
 - `strict=True`: `"1000"` (a string) is rejected, and `Infinity`/`NaN` are rejected.
 - `extra="forbid"`: unknown body fields → 422, so a typo in a PATCH can't return 200 while changing nothing.
 - PATCH fields are optional but **cannot be `null`**.
 - Plot names can't be blank either (the spec only says this for farms).
+- Names are at most 255 characters, and text with NUL characters is rejected, because PostgreSQL cannot store NUL.
 
 Catalogue references (`crop_id`, `soil_id`, `emitter_id`, and `farm_id`) are checked against the database, and all unknown references are reported in one 422.
 
@@ -141,7 +143,7 @@ This is also why uniqueness is **case-sensitive**: it matches what the `UNIQUE` 
 
 Order: cheap checks with no database first, then database checks under the lock, then the constraints as the final net.
 
-## 7. Spec gaps and my decisions (judgment log)
+## 7. Spec gaps and my decisions
 
 The spec left several things open. In each case the AI agent suggested options with a recommendation, and I decided:
 
@@ -164,7 +166,7 @@ An unknown `farm_id` in a **body** is 422, not 404. The URL resource is fine and
 
 ## 8. Testing
 
-- **186 tests; 174 pass on SQLite and 183 on PostgreSQL** (backend-specific tests are skipped on the other one). Each test seeds a **fresh `registry.db` in a temp directory** using the real `seed_registry.sh` and swaps it in through `app.dependency_overrides`. Tests are isolated, and the real DB is never touched.
+- **204 tests; 192 pass on SQLite, and 12 PostgreSQL-only tests are skipped unless a PostgreSQL database is configured.** A parity suite (`test_backend_parity.py`) checks both backends behave the same. Each test seeds a **fresh `registry.db` in a temp directory** using the real `seed_registry.sh` and swaps it in through `app.dependency_overrides`. Tests are isolated, and the real DB is never touched.
 - **FR coverage:** every CRUD status code, the `?farm_id=` filter, PATCH semantics (partial updates, moves, renames, keeping its own name), 405 on every non-GET catalogue method, and the "only spec fields" responses.
 - **FR-1.3 boundaries:** `lat=90` accepted, just above rejected, `area_m2=0` rejected, today (UTC) accepted, tomorrow rejected, numeric strings, infinity, and every failing field reported in one response.
 - **FR-1.4 failure modes:** problem+json shape for each code, missing DB → 503 + Retry-After, **locked DB → 503**, DB without schema → 500, unexpected exception → 500.
@@ -172,7 +174,9 @@ An unknown `farm_id` in a **body** is 422, not 404. The URL resource is fine and
 
 ## 9. NFR-1.1 measurement
 
-Locust: 10 users × 1 request/s ≈ 10 RPS for 5 minutes, randomly hitting the 5 list endpoints and 5 by-id endpoints. The server runs without `--reload`, and `--reset-stats` drops the ramp-up.
+The current figures, from the service README: Locust at 10 requests per second for 60 s on the seeded data gives **p95 = 40 ms on SQLite** and **p95 = 71 ms on PostgreSQL** (a local Docker database), measured after the move to SQLAlchemy, 0 failures on both. Most of the PostgreSQL time is opening a new connection per request, so a remote database may need a connection pool.
+
+The original P1 run (SQLite only): 10 users × 1 request/s ≈ 10 RPS for 5 minutes, randomly hitting the 5 list endpoints and 5 by-id endpoints. The server ran without `--reload`, and `--reset-stats` dropped the ramp-up.
 
 | Requests | Failures | RPS | Median | **p95** | p99 | Max |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -193,8 +197,8 @@ That is **5× under the 100 ms budget**. Caveats: it was measured on the seed da
 
 ## 11. Likely questions
 
-- **Why no ORM?** Five fixed tables and simple queries. Raw SQL keeps each database's locking and error handling visible (`BEGIN IMMEDIATE` and SQLite error names, the PostgreSQL advisory lock and SQLSTATEs), and the few differences between the two databases live in `db.py`.
+- **Why SQLAlchemy Core and no ORM?** The P2 spec requires all data access to go through SQLAlchemy. Core runs the same plain SQL over five fixed tables, so the locking and error handling stay visible (`BEGIN IMMEDIATE` and SQLite error names, the PostgreSQL advisory lock and SQLSTATEs), and the few differences between the two databases live in `db.py`. An ORM would add model classes for no gain.
 - **How do you guarantee unique plot names under concurrency?** The lock is taken before checking, and the `UNIQUE` constraint maps to 409 as a backstop.
 - **Why 503 with `Retry-After` and not 500?** A missing or locked DB is a *transient* infrastructure problem, so the client should retry. A 500 means a bug.
 - **How do you make sure you return only the spec fields?** `response_model` on every route filters the output, and tests assert the exact key set.
-- **What did the AI agent do vs. you?** The agent implemented the code and raised the spec gaps as options with a recommendation. I made the decisions, and they are logged with reasons in `docs/judgment-log.md`. In one case (plot id) I went against the first suggestion.
+- **What did the AI agent do vs. you?** The agent implemented the code and raised the spec gaps as options with a recommendation. I made the decisions, and they are recorded with reasons in §7. In one case (plot id) I went against the first suggestion.

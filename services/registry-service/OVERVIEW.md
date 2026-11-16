@@ -11,15 +11,15 @@ Port **8000**. The system of record for AgroPilot. It stores farms and plots and
 
 ## Tech stack
 
-Python 3.12, FastAPI, Pydantic v2, psycopg 3 (PostgreSQL) and the standard `sqlite3` module, `uv`, pytest, Locust.
+Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2 Core (no ORM) with the `sqlite3` and `psycopg` 3 drivers, `pydantic-settings`, `uv`, pytest, Locust.
 
 ## Code layout
 
 | File | Role |
 |---|---|
 | `main.py` | Builds the app, resolves `DATABASE_URL` once at startup, serves `/health` |
-| `config.py` | `database_url()`: process environment first, then `.env`, then the default `registry.db`. Validates the scheme and fails fast |
-| `db.py` | Opens connections; `PgConnection` wraps psycopg so it takes the same SQL as sqlite3; write transactions; maps database errors to "unavailable" or "bug" |
+| `config.py` | `Settings` (`pydantic-settings`) and `database_url()`: process environment first, then `.env`, then the default `registry.db`. Validates the scheme and fails fast |
+| `db.py` | SQLAlchemy engines (autocommit, one connection per request); write transactions; reads the driver's error behind SQLAlchemy's to decide "unavailable" or "bug" |
 | `repository.py` | All SQL, one function per query. Column names used in `UPDATE` are checked against a whitelist |
 | `schemas.py` | Pydantic request and response models and field validation |
 | `routers/` | `farms.py`, `plots.py`, `catalogues.py`: thin HTTP handlers |
@@ -60,11 +60,9 @@ Plot fields: `id`, `farm_id`, `name`, `area_m2`, `crop_id`, `planting_date`, `so
 
 ## Tests and performance
 
-- `uv run pytest` runs 181 tests on SQLite. 12 PostgreSQL-only tests run when `TEST_DATABASE_URL` points at the throwaway database. A parity suite checks both backends behave the same.
-- NFR-2.2 (GET p95 ≤ 100 ms at 10 req/s, Locust, 60 s): **20 ms on SQLite, 76 ms on PostgreSQL**, 0 failures. The PostgreSQL figure is against a local Docker database. Most of it is opening a new connection per request, so a remote database may need a connection pool.
+- `uv run pytest` runs 192 tests on SQLite. 12 PostgreSQL-only tests run when `TEST_DATABASE_URL` points at the throwaway database. A parity suite checks both backends behave the same.
+- NFR-2.2 (GET p95 ≤ 100 ms at 10 req/s, Locust, 60 s): **40 ms on SQLite, 71 ms on PostgreSQL** (measured after the move to SQLAlchemy; SQLite was 20 ms before), 0 failures. The PostgreSQL figure is against a local Docker database. Most of it is opening a new connection per request, so a remote database may need a connection pool.
 
-## Known gaps against the P2 spec
+## Known gaps
 
-- **Not SQLAlchemy.** The spec requires all database access through SQLAlchemy. The code uses `sqlite3` and `psycopg` directly with a small adapter. This is a real deviation. Either migrate `db.py` and `repository.py` to SQLAlchemy or record the exception in the design document.
-- **Not `pydantic-settings`.** `config.py` reads one variable with `python-dotenv`. It does fail fast, but the spec asks for `pydantic-settings`.
 - The provisioning command on PostgreSQL works against an *existing* database. It does not create the database itself.
