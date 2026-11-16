@@ -14,7 +14,7 @@ import httpx
 FORECAST_DAYS = 7
 _ET0 = "et0_fao_evapotranspiration"
 _RAIN = "rain_sum"
-_MAX_OFFSET_SECONDS = 24 * 3600
+_MAX_OFFSET_SECONDS = 24 * 3600 # maximum allowed UTC offset in seconds (24 hours)  
 
 
 class ProviderError(Exception):

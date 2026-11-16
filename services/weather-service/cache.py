@@ -21,7 +21,7 @@ def cell_key(lat: float, lon: float) -> tuple[int, int]:
 class Entry:
     fetched_at: datetime  # UTC time the provider was last successfully called
     utc_offset_seconds: int  # of the point, as reported by the provider
-    days: tuple[Day, ...]
+    days: tuple[Day, ...] # Forecasted weather data for each day
 
     @property
     def first_date(self) -> date:
