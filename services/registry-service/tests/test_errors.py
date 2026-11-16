@@ -92,7 +92,7 @@ def test_locked_database_returns_503_with_retry_after(seeded_db: Path):
 
     def impatient_db():
         conn = connect(seeded_db)
-        conn.execute("PRAGMA busy_timeout = 50")
+        conn.exec_driver_sql("PRAGMA busy_timeout = 50")
         try:
             yield conn
         finally:

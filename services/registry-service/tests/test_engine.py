@@ -15,7 +15,7 @@ def test_sqlalchemy_url_maps_postgres_schemes():
 
 @pytest.mark.sqlite_only
 def test_sqlite_connection_has_foreign_keys_on(seeded_db: Path):
-    conn = db.sa_connect(seeded_db)
+    conn = db.connect(seeded_db)
     try:
         assert conn.exec_driver_sql("PRAGMA foreign_keys").scalar() == 1
     finally:
@@ -25,7 +25,7 @@ def test_sqlite_connection_has_foreign_keys_on(seeded_db: Path):
 @pytest.mark.sqlite_only
 def test_missing_sqlite_file_is_not_created(tmp_path: Path):
     with pytest.raises(exc.OperationalError):
-        db.sa_connect(tmp_path / "x.db")
+        db.connect(tmp_path / "x.db")
 
     assert not (tmp_path / "x.db").exists()
 
