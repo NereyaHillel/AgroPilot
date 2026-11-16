@@ -62,6 +62,9 @@ INTEGRITY_ERRORS: tuple[type[Exception], ...] = (sa_exc.IntegrityError,)
 
 
 def _in_transaction(conn: Conn) -> bool:
+    # A connection the server killed is invalidated: there is nothing left to roll back.
+    if conn.invalidated:
+        return False
     raw = conn.connection.dbapi_connection
     if conn.dialect.name == "postgresql":
         return raw.info.transaction_status in (TransactionStatus.INTRANS, TransactionStatus.INERROR)
