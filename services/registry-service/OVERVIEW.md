@@ -60,7 +60,7 @@ Plot fields: `id`, `farm_id`, `name`, `area_m2`, `crop_id`, `planting_date`, `so
 
 ## Tests and performance
 
-- `uv run pytest` runs 192 tests on SQLite. 12 PostgreSQL-only tests run when `TEST_DATABASE_URL` points at the throwaway database. A parity suite checks both backends behave the same.
+- `uv run pytest` runs 198 tests on SQLite. 12 PostgreSQL-only tests run when `TEST_DATABASE_URL` points at the throwaway database. A parity suite checks both backends behave the same.
 - NFR-2.2 (GET p95 ≤ 100 ms at 10 req/s, Locust, 60 s): **40 ms on SQLite, 71 ms on PostgreSQL** (measured after the move to SQLAlchemy; SQLite was 20 ms before), 0 failures. The PostgreSQL figure is against a local Docker database. Most of it is opening a new connection per request, so a remote database may need a connection pool.
 
 ## Known gaps

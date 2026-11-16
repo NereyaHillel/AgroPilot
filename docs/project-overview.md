@@ -46,7 +46,7 @@
 - **Python 3.12**, **FastAPI 0.115** + **Pydantic v2**, **uvicorn**
 - **SQLite** (default, local and tests) or **PostgreSQL** (production), chosen by `DATABASE_URL`. All access goes through **SQLAlchemy Core** (no ORM) with the `sqlite3` and `psycopg` drivers; settings use `pydantic-settings`
 - **uv** for environment and dependencies
-- **pytest** + FastAPI `TestClient`: **204 tests**; 192 run and pass on SQLite and 12 PostgreSQL-only tests are skipped unless `TEST_DATABASE_URL` points at a PostgreSQL database
+- **pytest** + FastAPI `TestClient`: **210 tests**; 198 run and pass on SQLite and 12 PostgreSQL-only tests are skipped unless `TEST_DATABASE_URL` points at a PostgreSQL database
 - **Locust** (run through `uvx`, so it is not a project dependency) for NFR-1.1
 
 ## 5. Architecture
@@ -166,7 +166,7 @@ An unknown `farm_id` in a **body** is 422, not 404. The URL resource is fine and
 
 ## 8. Testing
 
-- **204 tests; 192 pass on SQLite, and 12 PostgreSQL-only tests are skipped unless a PostgreSQL database is configured.** A parity suite (`test_backend_parity.py`) checks both backends behave the same. Each test seeds a **fresh `registry.db` in a temp directory** using the real `seed_registry.sh` and swaps it in through `app.dependency_overrides`. Tests are isolated, and the real DB is never touched.
+- **210 tests; 198 pass on SQLite, and 12 PostgreSQL-only tests are skipped unless a PostgreSQL database is configured.** A parity suite (`test_backend_parity.py`) checks both backends behave the same. Each test seeds a **fresh `registry.db` in a temp directory** using the real `seed_registry.sh` and swaps it in through `app.dependency_overrides`. Tests are isolated, and the real DB is never touched.
 - **FR coverage:** every CRUD status code, the `?farm_id=` filter, PATCH semantics (partial updates, moves, renames, keeping its own name), 405 on every non-GET catalogue method, and the "only spec fields" responses.
 - **FR-1.3 boundaries:** `lat=90` accepted, just above rejected, `area_m2=0` rejected, today (UTC) accepted, tomorrow rejected, numeric strings, infinity, and every failing field reported in one response.
 - **FR-1.4 failure modes:** problem+json shape for each code, missing DB → 503 + Retry-After, **locked DB → 503**, DB without schema → 500, unexpected exception → 500.
