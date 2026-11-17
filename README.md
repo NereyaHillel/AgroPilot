@@ -30,7 +30,7 @@ The frontend lists farms and plots from the registry and asks the planner for th
 | [planner-service](services/planner-service) | 8002 | The irrigation plan for a plot: crop coefficient, soil bucket, litres and run minutes | FastAPI, FAO-56 engine | [README](services/planner-service/README.md) |
 | [frontend](services/frontend) | 3000 | Farms, plots, today's recommendation and the 7-day plan | Next.js, TypeScript, Tailwind, shadcn/ui | [README](services/frontend/README.md) |
 
-Each README covers that service's API, settings, tests and design decisions.
+Each README covers that service's API, settings, tests and design decisions. Each service folder also has an `OVERVIEW.md`: a shorter tour of its responsibilities, code layout and known limits.
 
 ## Quick start
 
@@ -86,6 +86,7 @@ The planner follows the FAO-56 single crop coefficient method. Each day: Kc from
 
 Every number in a plan comes from the engine in `services/planner-service`. No AI model computes or adjusts irrigation numbers.
 
+For a plain-language walk through the chain (ET0, Kc, the soil bucket, the trigger rule, litres and run minutes), read [How AgroPilot turns weather into drip minutes](reports/Crop%20water%20science%20explained.md). It also flags where the project's rules differ from FAO or from usual drip practice.
 
 ## Repository layout
 
@@ -95,21 +96,25 @@ services/
   weather-service/      Forecast from Open-Meteo, cached
   planner-service/      Irrigation engine and plan API
     docs/research/      FAO-56 research notes
-  frontend/             Next.js web app
+  frontend/             Next.js web app (farm-supply look, seedling favicon)
+  */OVERVIEW.md         Short tour of each service
 scripts/
   run-all.sh            Starts all four services
 docs/
   project-overview.md   Registry: business and technical overview
-  judgment-log.md       Decisions made where a spec was open, and why
   superpowers/          Design documents and plans (specs/, plans/)
+reports/                Written explanations, e.g. the crop water science report
+research_notes/         Source notes behind the reports, with links to FAO-56
 .claude/
   skills/               registry-api (API conventions), irrigation-calc-reference
+                        (and its evaluation workspace)
   settings.json         Blocks agents from reading .env files
 ```
 
 ## Documentation
 
-- [docs/judgment-log.md](docs/judgment-log.md): the decisions behind the behaviour, numbered, with the reason for each
 - [docs/project-overview.md](docs/project-overview.md): what the registry does and how it is built
+- [reports/Crop water science explained.md](reports/Crop%20water%20science%20explained.md): how weather becomes drip minutes, and where the project departs from FAO-56
+- [research_notes/](research_notes/Crop%20water%20science%20explained): the sourced notes behind that report
 - [weather-service design](docs/superpowers/specs/2026-11-12-weather-service-design.md): goals, anti-goals and decisions for the weather service
 - [PostgreSQL support](docs/superpowers/specs/2026-11-11-postgres-support-design.md) and its [plan](docs/superpowers/plans/2026-11-11-postgres-support.md)
