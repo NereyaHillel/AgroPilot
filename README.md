@@ -1,4 +1,4 @@
-# AgroPilot
+# AgroPilot - irrigation planning for growers
 
 AgroPilot helps growers manage crops with data. For every plot it answers one question:
 
