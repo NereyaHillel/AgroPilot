@@ -10,9 +10,11 @@ Usage, from services/registry-service, with DATABASE_URL set (environment or .en
 import sys
 from urllib.parse import urlsplit
 
-import psycopg
+import sqlalchemy
+from sqlalchemy import text
 
 import config
+import db
 
 TABLES = ("plots", "farms", "crops", "soils", "emitters")
 
@@ -109,21 +111,12 @@ class DatabaseNotEmpty(Exception):
     pass
 
 
-def seed(conn: psycopg.Connection) -> None:
-    with conn.transaction():
-        existing = [
-            name
-            for (name,) in conn.execute(
-                "SELECT table_name FROM information_schema.tables"
-                " WHERE table_schema = current_schema() AND table_name = ANY(%s)",
-                (list(TABLES),),
-            )
-        ]
-        if existing:
-            raise DatabaseNotEmpty(
-                f"Registry tables already exist: {', '.join(sorted(existing))}"
-            )
-        conn.execute(SCHEMA_AND_SEED)
+def seed(conn: sqlalchemy.Connection) -> None:
+    """Create and seed the tables inside the caller's transaction."""
+    existing = sorted(set(sqlalchemy.inspect(conn).get_table_names()) & set(TABLES))
+    if existing:
+        raise DatabaseNotEmpty(f"Registry tables already exist: {', '.join(existing)}")
+    conn.exec_driver_sql(SCHEMA_AND_SEED)
 
 
 def main() -> int:
@@ -135,14 +128,15 @@ def main() -> int:
     if urlsplit(url).scheme not in ("postgresql", "postgres"):
         print("DATABASE_URL is not a PostgreSQL URL.", file=sys.stderr)
         return 1
-    with psycopg.connect(url) as conn:
+    engine = sqlalchemy.create_engine(db.sqlalchemy_url(url))
+    with engine.begin() as conn:
         try:
             seed(conn)
         except DatabaseNotEmpty as error:
             print(f"{error}. Nothing was changed.", file=sys.stderr)
             return 1
         counts = {
-            table: conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
+            table: conn.execute(text(f"SELECT count(*) FROM {table}")).scalar_one()
             for table in TABLES
         }
     print("Seeded PostgreSQL database:")

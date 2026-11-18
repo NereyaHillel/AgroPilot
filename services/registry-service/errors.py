@@ -1,12 +1,11 @@
 import logging
-import sqlite3
 from http import HTTPStatus
 from typing import Any, ClassVar
 
-import psycopg
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import DBAPIError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.routing import Route
 
@@ -128,7 +127,7 @@ async def _handle_validation_error(request: Request, exc: RequestValidationError
 
 
 async def _handle_database_error(
-    request: Request, exc: sqlite3.Error | psycopg.Error
+    request: Request, exc: DBAPIError
 ) -> JSONResponse:
     if is_unavailable(exc):
         logger.warning("registry database unavailable: %s", exc)
@@ -147,6 +146,5 @@ def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(ApiProblem, _handle_problem)
     app.add_exception_handler(StarletteHTTPException, _handle_http_error)
     app.add_exception_handler(RequestValidationError, _handle_validation_error)
-    app.add_exception_handler(sqlite3.Error, _handle_database_error)
-    app.add_exception_handler(psycopg.Error, _handle_database_error)
+    app.add_exception_handler(DBAPIError, _handle_database_error)
     app.add_exception_handler(Exception, _handle_unexpected)

@@ -1,0 +1,13 @@
+{
+  "eval_id": 2,
+  "eval_name": "tomato-drip-kc-mid-adjusted",
+  "prompt": "Tomato on drip irrigation (about 40% of the soil surface wetted), Mediterranean planting in April/May, day 100 of the season. ET0 is 5.5 mm/day, mid-season mean wind 3 m/s at 2 m, mid-season mean minimum relative humidity 35%. Using FAO-56 (single Kc), what Kc and crop ET (ETc) should the planner use for that day? Show the stage lengths, which Kc values you used and where each came from, and list assumptions. Do not ask me questions.",
+  "assertions": [
+    "Uses Table 11 Mediterranean tomato stage lengths 30/40/45/30 days and places day 100 in the mid-season stage",
+    "Uses tabulated Kc mid = 1.15 for tomato",
+    "Applies the Eq. 62 climate adjustment, giving an adjusted Kc mid of about 1.20 (1.19-1.21) using h = 0.6 m",
+    "Reports ETc of about 6.6 mm/day (6.5-6.7)",
+    "Does not multiply Kc mid by the wetted fraction fw (fw only scales Kc ini)",
+    "Cites FAO-56 equation or table numbers for the values used"
+  ]
+}

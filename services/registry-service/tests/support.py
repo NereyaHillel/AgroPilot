@@ -1,4 +1,3 @@
-import sqlite3
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
@@ -32,10 +31,10 @@ def plot_payload(**overrides: Any) -> dict[str, Any]:
     return payload
 
 
-def database_from(path: Path) -> Callable[[], Iterator[sqlite3.Connection]]:
+def database_from(path: Path) -> Callable[[], Iterator[Conn]]:
     """Stand-in for get_db that opens the database at path."""
 
-    def dependency() -> Iterator[sqlite3.Connection]:
+    def dependency() -> Iterator[Conn]:
         conn = connect(path)
         try:
             yield conn

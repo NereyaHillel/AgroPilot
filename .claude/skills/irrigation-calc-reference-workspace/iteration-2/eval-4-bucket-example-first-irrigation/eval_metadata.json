@@ -1,0 +1,11 @@
+{
+  "eval_id": 4,
+  "eval_name": "bucket-example-first-irrigation",
+  "prompt": "In the planner's bucket model, a 70 mm bucket loses 7 mm every day with no rain. Which day does the planner first irrigate, how many mm does that irrigation apply, and what is the bucket level at the end of that day? Do not ask me questions.",
+  "assertions": [
+    "Says the first irrigation is on day 6 (day 5 ends at exactly 35 mm, which does not trigger)",
+    "Says the irrigation applies 42 mm",
+    "Says the end-of-day level on that day is 70 mm",
+    "States that the bucket starts full on day 1"
+  ]
+}

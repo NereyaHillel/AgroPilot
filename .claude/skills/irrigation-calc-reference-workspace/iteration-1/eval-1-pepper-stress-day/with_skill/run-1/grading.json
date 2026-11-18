@@ -1,0 +1,45 @@
+{
+  "expectations": [
+    {
+      "text": "Reports TAW = 72 mm",
+      "passed": true,
+      "evidence": "TAW = 72.0 mm"
+    },
+    {
+      "text": "Adjusts p for ETc (p = 0.30 + 0.04 x (5 - ETc) = 0.248) instead of using the table p of 0.30 unchanged",
+      "passed": true,
+      "evidence": "p = 0.248 via 0.30+0.04(5-6.3)"
+    },
+    {
+      "text": "Reports RAW of about 17.9 mm (not 21.6)",
+      "passed": true,
+      "evidence": "RAW 17.86 mm"
+    },
+    {
+      "text": "Reports Ks of about 0.78 (0.77-0.78)",
+      "passed": true,
+      "evidence": "Ks 0.776"
+    },
+    {
+      "text": "Reports stressed ETc of about 4.9 mm/day",
+      "passed": true,
+      "evidence": "Stressed ETc 4.89"
+    },
+    {
+      "text": "Reports end-of-day depletion of about 34.9 mm and recommends irrigating about 34.9 mm net",
+      "passed": true,
+      "evidence": "Dr 34.89, irrigate 34.89 mm net"
+    },
+    {
+      "text": "States the assumption about which depletion value (start-of-day) feeds Ks and which Kc mid (1.05) and p (0.30) were used",
+      "passed": true,
+      "evidence": "Assumptions list start-of-day Dr, Kc mid 1.05, p adjusted with unstressed ETc"
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 0,
+    "total": 7,
+    "pass_rate": 1.0
+  }
+}

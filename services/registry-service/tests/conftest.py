@@ -3,12 +3,12 @@ import subprocess
 from collections.abc import Iterator
 from pathlib import Path
 
-import psycopg
 import pytest
+import sqlalchemy
 from fastapi.testclient import TestClient
 from support import database_from_url
 
-from db import get_db
+from db import get_db, sqlalchemy_url
 from main import app
 from seed_registry_pg import TABLES, seed
 
@@ -57,11 +57,13 @@ def db_url(request: pytest.FixtureRequest) -> str:
     if not url:
         return f"sqlite:///{request.getfixturevalue('seeded_db')}"
     # Only ever drop tables in the test database, never the one DATABASE_URL names.
-    name = psycopg.conninfo.conninfo_to_dict(url)["dbname"]
+    name = sqlalchemy.engine.make_url(url).database
     assert "test" in name, f"refusing to drop tables in {name!r}"
-    with psycopg.connect(url) as conn:
-        conn.execute(f"DROP TABLE IF EXISTS {', '.join(TABLES)} CASCADE")
+    engine = sqlalchemy.create_engine(sqlalchemy_url(url))
+    with engine.begin() as conn:
+        conn.exec_driver_sql(f"DROP TABLE IF EXISTS {', '.join(TABLES)} CASCADE")
         seed(conn)
+    engine.dispose()
     return url
 
 
