@@ -19,6 +19,10 @@ RETRY_AFTER_SECONDS = 5
 # The spec's code list has no entry for 405, so it maps to VALIDATION.
 FRAMEWORK_CODES = {404: "NOT_FOUND", 405: "VALIDATION"}
 
+# Python 3.13 renamed the phrase for 422 to "Unprocessable Content". Pin the title so it
+# does not depend on the interpreter version.
+TITLE_OVERRIDES = {422: "Unprocessable Entity"}
+
 # The 400 FastAPI raises when it cannot decode a body, such as non-UTF-8 bytes.
 FASTAPI_BODY_READ_ERROR = "There was an error parsing the body"
 
@@ -68,7 +72,7 @@ def problem_response(
     return JSONResponse(
         {
             "type": "about:blank",
-            "title": HTTPStatus(status).phrase,
+            "title": TITLE_OVERRIDES.get(status) or HTTPStatus(status).phrase,
             "status": status,
             "detail": detail,
             "code": code,
