@@ -2,6 +2,7 @@ import json
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from fastapi.testclient import TestClient
 from support import (
     FARM_DEMO,
     FARM_EAST,
@@ -10,8 +11,13 @@ from support import (
     PLOT_NORTH,
     PLOT_WEST,
     UNKNOWN_ID,
+    database_from,
     plot_payload,
 )
+from test_errors import assert_problem
+
+from db import get_db
+from main import app
 
 NORTH_BLOCK = {
     "id": PLOT_NORTH,
@@ -293,3 +299,46 @@ def test_plot_name_of_256_characters_is_rejected(client):
     assert response.status_code == 422
     assert response.json()["code"] == "VALIDATION"
     assert response.json()["detail"] == "name: String should have at most 255 characters"
+
+
+def test_plot_area_converts_square_metres_to_dunams(client):
+    response = client.get(f"/v1/plots/{PLOT_NORTH}/area")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body) == {"plot_id", "area_m2", "area_dunam"}
+    assert body == {"plot_id": PLOT_NORTH, "area_m2": 1000, "area_dunam": 1.0}
+
+
+def test_plot_area_of_east_block_is_0_8_dunams(client):
+    body = client.get(f"/v1/plots/{PLOT_EAST}/area").json()
+
+    assert body == {"plot_id": PLOT_EAST, "area_m2": 800, "area_dunam": 0.8}
+
+
+def test_plot_area_follows_plot_changes(client):
+    client.patch(f"/v1/plots/{PLOT_NORTH}", json={"area_m2": 2500})
+
+    assert client.get(f"/v1/plots/{PLOT_NORTH}/area").json()["area_dunam"] == 2.5
+
+
+def test_plot_area_of_unknown_plot_returns_404(client):
+    body = assert_problem(client.get(f"/v1/plots/{UNKNOWN_ID}/area"), 404, "NOT_FOUND")
+
+    assert body["detail"] == f"Plot {UNKNOWN_ID} not found"
+
+
+def test_plot_area_with_malformed_id_returns_422(client):
+    body = assert_problem(client.get("/v1/plots/not-a-uuid/area"), 422, "VALIDATION")
+
+    assert body["detail"].startswith("plot_id: ")
+
+
+@pytest.mark.sqlite_only
+def test_plot_area_returns_503_when_database_is_unavailable(tmp_path):
+    app.dependency_overrides[get_db] = database_from(tmp_path / "missing.db")
+
+    response = TestClient(app).get(f"/v1/plots/{PLOT_NORTH}/area")
+
+    assert_problem(response, 503, "UNAVAILABLE")
+    assert response.headers["retry-after"] == "5"

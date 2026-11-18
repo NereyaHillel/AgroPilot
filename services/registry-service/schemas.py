@@ -109,6 +109,12 @@ class Plot(BaseModel):
     lon: float
 
 
+class PlotArea(BaseModel):
+    plot_id: UUID
+    area_m2: float
+    area_dunam: float
+
+
 class Crop(BaseModel):
     id: str
     name: str

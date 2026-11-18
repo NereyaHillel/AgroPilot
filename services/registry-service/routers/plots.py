@@ -7,9 +7,11 @@ from fastapi import APIRouter, Response
 import repository
 from db import Conn, DbConn, write_transaction
 from errors import ConflictProblem, ValidationProblem, require
-from schemas import Plot, PlotCreate, PlotUpdate
+from schemas import Plot, PlotArea, PlotCreate, PlotUpdate
 
 router = APIRouter(prefix="/v1/plots", tags=["plots"])
+
+M2_PER_DUNAM = 1000
 
 # Reference field -> (noun for messages, lookup that proves the referenced record exists).
 _REFERENCES = {
@@ -38,6 +40,16 @@ def list_plots(conn: DbConn, farm_id: UUID | None = None) -> list[dict[str, Any]
 @router.get("/{plot_id}", response_model=Plot)
 def get_plot(plot_id: UUID, conn: DbConn) -> dict[str, Any]:
     return _plot_or_404(conn, plot_id)
+
+
+@router.get("/{plot_id}/area", response_model=PlotArea)
+def get_plot_area(plot_id: UUID, conn: DbConn) -> dict[str, Any]:
+    plot = _plot_or_404(conn, plot_id)
+    return {
+        "plot_id": plot["id"],
+        "area_m2": plot["area_m2"],
+        "area_dunam": plot["area_m2"] / M2_PER_DUNAM,
+    }
 
 
 @router.patch("/{plot_id}", response_model=Plot)
