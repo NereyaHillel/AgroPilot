@@ -1,8 +1,11 @@
 import sqlite3
 from pathlib import Path
+from types import SimpleNamespace
 
+import psycopg
 import pytest
 import sqlalchemy
+from psycopg.pq import TransactionStatus
 from sqlalchemy import exc
 
 import db
@@ -104,3 +107,114 @@ def test_database_errors_do_not_expose_bound_parameters(seeded_db: Path):
         conn.close()
 
     assert "SECRET-NAME" not in str(caught.value)
+
+
+class FakeConn:
+    """Stands in for a SQLAlchemy connection so Postgres-only code runs without a server."""
+
+    def __init__(self, dialect="postgresql", invalidated=False, transaction_status=None):
+        self.dialect = SimpleNamespace(name=dialect)
+        self.invalidated = invalidated
+        info = SimpleNamespace(transaction_status=transaction_status)
+        self.connection = SimpleNamespace(dbapi_connection=SimpleNamespace(info=info))
+        self.statements = []
+
+    def exec_driver_sql(self, sql):
+        self.statements.append(sql)
+
+
+def test_invalidated_connection_is_not_in_a_transaction():
+    assert db._in_transaction(FakeConn(invalidated=True)) is False
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        (TransactionStatus.INTRANS, True),
+        (TransactionStatus.INERROR, True),
+        (TransactionStatus.IDLE, False),
+    ],
+)
+def test_postgres_transaction_state_comes_from_libpq(status, expected):
+    assert db._in_transaction(FakeConn(transaction_status=status)) is expected
+
+
+def test_postgres_write_transaction_takes_the_advisory_lock_then_commits():
+    conn = FakeConn()
+
+    with db.write_transaction(conn):
+        pass
+
+    assert conn.statements == [
+        "BEGIN",
+        f"SELECT pg_advisory_xact_lock({db.PG_WRITE_LOCK_KEY})",
+        "COMMIT",
+    ]
+
+
+def test_write_transaction_rolls_back_and_reraises_when_the_block_fails():
+    conn = FakeConn(transaction_status=TransactionStatus.INERROR)
+
+    with pytest.raises(RuntimeError, match="boom"), db.write_transaction(conn):
+        raise RuntimeError("boom")
+
+    assert conn.statements[-1] == "ROLLBACK"
+    assert "COMMIT" not in conn.statements
+
+
+def test_write_transaction_skips_rollback_when_the_connection_is_gone():
+    conn = FakeConn(invalidated=True)
+
+    with pytest.raises(RuntimeError, match="boom"), db.write_transaction(conn):
+        raise RuntimeError("boom")
+
+    assert "ROLLBACK" not in conn.statements
+
+
+def test_errors_that_are_not_database_errors_are_not_unavailable():
+    assert db.is_unavailable(ValueError("not a database error")) is False
+
+
+def test_postgres_unique_violation_is_recognised():
+    assert db.is_unique_violation(psycopg.errors.UniqueViolation()) is True
+    assert db.is_unique_violation(psycopg.errors.ForeignKeyViolation()) is False
+
+
+def test_postgres_foreign_key_violation_is_recognised():
+    assert db.is_foreign_key_violation(psycopg.errors.ForeignKeyViolation()) is True
+    assert db.is_foreign_key_violation(psycopg.errors.UniqueViolation()) is False
+
+
+def test_postgres_sorts_names_with_the_c_collation():
+    assert db.order_by_name(FakeConn()) == 'ORDER BY name COLLATE "C", id COLLATE "C"'
+    assert db.order_by_name(FakeConn(dialect="sqlite")) == "ORDER BY name, id"
+
+
+def test_sqlite_url_without_three_slashes_is_rejected():
+    with pytest.raises(ValueError, match="must start with sqlite:///"):
+        db.sqlalchemy_url("sqlite:registry.db")
+
+
+def test_unrecognised_url_scheme_is_passed_through():
+    assert db.sqlalchemy_url("mysql://u:p@h/d") == "mysql://u:p@h/d"
+
+
+def test_postgres_engine_sets_timeouts_and_autocommit(monkeypatch):
+    created = {}
+
+    def fake_create_engine(url, **kwargs):
+        created.update(url=url, **kwargs)
+        return "engine"
+
+    monkeypatch.setattr(sqlalchemy, "create_engine", fake_create_engine)
+
+    # __wrapped__ skips the cache, so the fake engine is not kept for later tests.
+    engine = db.engine_for.__wrapped__("postgresql://u:p@h/d", "2s", "9s")
+
+    assert engine == "engine"
+    assert created["url"] == "postgresql+psycopg://u:p@h/d"
+    assert created["isolation_level"] == "AUTOCOMMIT"
+    assert created["connect_args"] == {
+        "connect_timeout": db.PG_CONNECT_TIMEOUT_SECONDS,
+        "options": "-c lock_timeout=2s -c statement_timeout=9s",
+    }
