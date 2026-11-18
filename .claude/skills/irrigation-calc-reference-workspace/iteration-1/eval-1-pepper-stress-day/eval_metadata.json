@@ -1,0 +1,14 @@
+{
+  "eval_id": 1,
+  "eval_name": "pepper-stress-day",
+  "prompt": "I'm checking the planner's output for one day. Bell pepper, mid-season, sandy loam with field capacity 0.22 and wilting point 0.10 m3/m3, rooting depth 0.6 m, ET0 6.0 mm/day, no rain, no irrigation yesterday or today. Root zone depletion at the start of the day was 30 mm. Using the FAO-56 single crop coefficient method, give me: TAW, RAW, Ks, the stressed crop ET for the day, end-of-day depletion, and whether to irrigate tomorrow morning and how much (net mm). State any assumptions you had to make. Do not ask me questions.",
+  "assertions": [
+    "Reports TAW = 72 mm",
+    "Adjusts p for ETc (p = 0.30 + 0.04 x (5 - ETc) = 0.248) instead of using the table p of 0.30 unchanged",
+    "Reports RAW of about 17.9 mm (not 21.6)",
+    "Reports Ks of about 0.78 (0.77-0.78)",
+    "Reports stressed ETc of about 4.9 mm/day",
+    "Reports end-of-day depletion of about 34.9 mm and recommends irrigating about 34.9 mm net",
+    "States the assumption about which depletion value (start-of-day) feeds Ks and which Kc mid (1.05) and p (0.30) were used"
+  ]
+}

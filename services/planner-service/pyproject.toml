@@ -1,0 +1,23 @@
+[project]
+name = "planner-service"
+version = "0.1.0"
+description = "AgroPilot planner service: FAO-56 irrigation plan for a plot."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi~=0.115.0",
+    "httpx>=0.28.1",
+    "pydantic-settings>=2.6",
+    "uvicorn~=0.32.0",
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

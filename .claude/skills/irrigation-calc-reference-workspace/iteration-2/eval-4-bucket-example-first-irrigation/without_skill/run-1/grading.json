@@ -1,0 +1,30 @@
+{
+  "expectations": [
+    {
+      "text": "Says the first irrigation is on day 6 (day 5 ends at exactly 35 mm, which does not trigger)",
+      "passed": true,
+      "evidence": "Day 6"
+    },
+    {
+      "text": "Says the irrigation applies 42 mm",
+      "passed": true,
+      "evidence": "42 mm"
+    },
+    {
+      "text": "Says the end-of-day level on that day is 70 mm",
+      "passed": true,
+      "evidence": "70 mm"
+    },
+    {
+      "text": "States that the bucket starts full on day 1",
+      "passed": true,
+      "evidence": "Assumes starts full"
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "total": 4,
+    "pass_rate": 1.0
+  }
+}

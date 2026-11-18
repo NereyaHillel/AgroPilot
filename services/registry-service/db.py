@@ -1,77 +1,23 @@
-import re
+import functools
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated
 
 import psycopg
+import sqlalchemy
 from fastapi import Depends, Request
 from psycopg.pq import TransactionStatus
-from psycopg.rows import dict_row
+from sqlalchemy import event
+from sqlalchemy import exc as sa_exc
+from sqlalchemy.pool import NullPool
 
 import config
 
 DB_PATH = Path(__file__).resolve().parent / "registry.db"
 
-# `?` and `:name` placeholders as written in the SQL; `::` (a Postgres cast) is left alone.
-# SQL passed through it must not contain `?`, `:word` or `%` inside string literals.
-_PLACEHOLDER = re.compile(r"\?|(?<!:):(\w+)")
-
-
-def connect(path: Path = DB_PATH) -> sqlite3.Connection:
-    # mode=rw: a missing file must fail, not be silently created as an empty database.
-    # check_same_thread=False: FastAPI may run the dependency and the endpoint on different threads.
-    conn = sqlite3.connect(
-        f"{path.as_uri()}?mode=rw",
-        uri=True,
-        isolation_level=None,
-        check_same_thread=False,
-    )
-    conn.row_factory = sqlite3.Row
-    # SQLite does not enforce foreign keys unless this is set on each connection.
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
-
-
-class PgConnection:
-    """A psycopg connection that takes the same SQL and parameters as sqlite3."""
-
-    def __init__(self, url: str) -> None:
-        # The timeouts go in the startup packet, so they cost no extra round trip.
-        self._conn = psycopg.connect(
-            url,
-            autocommit=True,
-            row_factory=dict_row,
-            connect_timeout=PG_CONNECT_TIMEOUT_SECONDS,
-            options=(
-                f"-c lock_timeout={PG_LOCK_TIMEOUT} -c statement_timeout={PG_STATEMENT_TIMEOUT}"
-            ),
-        )
-
-    def execute(self, sql: str, params: tuple[Any, ...] | dict[str, Any] = ()) -> psycopg.Cursor:
-        sql = _PLACEHOLDER.sub(lambda m: "%s" if m[0] == "?" else f"%({m[1]})s", sql)
-        return self._conn.execute(sql, params or None)
-
-    @property
-    def in_transaction(self) -> bool:
-        status = self._conn.info.transaction_status
-        return status in (TransactionStatus.INTRANS, TransactionStatus.INERROR)
-
-    def close(self) -> None:
-        self._conn.close()
-
-
-Conn = sqlite3.Connection | PgConnection
-
-
-def connect_url(url: str) -> Conn:
-    if url.startswith("sqlite:"):
-        if not url.startswith("sqlite:///"):
-            raise ValueError(f"SQLite DATABASE_URL must start with sqlite:///, got {url!r}")
-        path = Path(url.removeprefix("sqlite:///"))
-        return connect(path if path.is_absolute() else config.SERVICE_DIR / path)
-    return PgConnection(url)
+Conn = sqlalchemy.Connection
 
 
 def get_db(request: Request) -> Iterator[Conn]:
@@ -112,27 +58,45 @@ PG_CREDENTIAL_ERRORS = (
     "no password supplied",
 )
 
-INTEGRITY_ERRORS: tuple[type[Exception], ...] = (sqlite3.IntegrityError, psycopg.IntegrityError)
+INTEGRITY_ERRORS: tuple[type[Exception], ...] = (sa_exc.IntegrityError,)
+
+
+def _in_transaction(conn: Conn) -> bool:
+    # A connection the server killed is invalidated: there is nothing left to roll back.
+    if conn.invalidated:
+        return False
+    raw = conn.connection.dbapi_connection
+    if conn.dialect.name == "postgresql":
+        return raw.info.transaction_status in (TransactionStatus.INTRANS, TransactionStatus.INERROR)
+    return raw.in_transaction
 
 
 @contextmanager
 def write_transaction(conn: Conn) -> Iterator[None]:
     # SQLite: BEGIN IMMEDIATE takes the write lock up front, so checks made inside the block
     # cannot be invalidated by another writer before COMMIT. Postgres: an advisory lock held
-    # until COMMIT gives the same guarantee.
-    conn.execute("BEGIN" if isinstance(conn, PgConnection) else "BEGIN IMMEDIATE")
+    # until COMMIT gives the same guarantee. The engine is in autocommit mode, so these
+    # statements are the only transaction control.
+    postgres = conn.dialect.name == "postgresql"
+    conn.exec_driver_sql("BEGIN" if postgres else "BEGIN IMMEDIATE")
     try:
-        if isinstance(conn, PgConnection):
-            conn.execute(f"SELECT pg_advisory_xact_lock({PG_WRITE_LOCK_KEY})")
+        if postgres:
+            conn.exec_driver_sql(f"SELECT pg_advisory_xact_lock({PG_WRITE_LOCK_KEY})")
         yield
     except BaseException:
-        if conn.in_transaction:
-            conn.execute("ROLLBACK")
+        if _in_transaction(conn):
+            conn.exec_driver_sql("ROLLBACK")
         raise
-    conn.execute("COMMIT")
+    conn.exec_driver_sql("COMMIT")
+
+
+def underlying(exc: Exception) -> Exception:
+    # SQLAlchemy wraps the driver's error; the classifiers below read the original.
+    return exc.orig if isinstance(exc, sa_exc.DBAPIError) and exc.orig is not None else exc
 
 
 def is_unavailable(exc: Exception) -> bool:
+    exc = underlying(exc)
     if isinstance(exc, sqlite3.Error):
         return getattr(exc, "sqlite_errorname", None) in UNAVAILABLE_SQLITE_ERRORS
     if not isinstance(exc, psycopg.Error):
@@ -148,12 +112,14 @@ def is_unavailable(exc: Exception) -> bool:
 
 
 def is_unique_violation(exc: Exception) -> bool:
+    exc = underlying(exc)
     if isinstance(exc, sqlite3.IntegrityError):
         return exc.sqlite_errorname == "SQLITE_CONSTRAINT_UNIQUE"
     return isinstance(exc, psycopg.errors.UniqueViolation)
 
 
 def is_foreign_key_violation(exc: Exception) -> bool:
+    exc = underlying(exc)
     if isinstance(exc, sqlite3.IntegrityError):
         return exc.sqlite_errorname == "SQLITE_CONSTRAINT_FOREIGNKEY"
     return isinstance(exc, psycopg.errors.ForeignKeyViolation)
@@ -161,6 +127,61 @@ def is_foreign_key_violation(exc: Exception) -> bool:
 
 def order_by_name(conn: Conn) -> str:
     # SQLite compares text byte-wise; Postgres needs the "C" collation to sort the same way.
-    if isinstance(conn, PgConnection):
+    if conn.dialect.name == "postgresql":
         return 'ORDER BY name COLLATE "C", id COLLATE "C"'
     return "ORDER BY name, id"
+
+
+def sqlalchemy_url(url: str) -> str | sqlalchemy.URL:
+    if url.startswith("sqlite:"):
+        if not url.startswith("sqlite:///"):
+            raise ValueError(f"SQLite DATABASE_URL must start with sqlite:///, got {url!r}")
+        path = Path(url.removeprefix("sqlite:///"))
+        path = path if path.is_absolute() else config.SERVICE_DIR / path
+        # mode=rw: a missing file must fail, not be silently created as an empty database.
+        # Built as an object, not a string: SQLAlchemy would percent-decode the path in a string
+        # URL, and as_uri() encodes characters such as # and ? that SQLite would read as URI syntax.
+        return sqlalchemy.URL.create(
+            "sqlite", database=path.as_uri(), query={"mode": "rw", "uri": "true"}
+        )
+    scheme, _, rest = url.partition("://")
+    if scheme in ("postgresql", "postgres"):
+        return f"postgresql+psycopg://{rest}"
+    return url
+
+
+@functools.cache
+def engine_for(url: str, lock_timeout: str, statement_timeout: str) -> sqlalchemy.Engine:
+    # Autocommit: write_transaction issues its own BEGIN, so the lock is taken exactly when asked.
+    # NullPool: one connection per request, as before. The timeouts are part of the cache key.
+    sa_url = sqlalchemy_url(url)
+    if url.startswith("sqlite:"):
+        engine = sqlalchemy.create_engine(
+            sa_url, poolclass=NullPool, isolation_level="AUTOCOMMIT", hide_parameters=True
+        )
+
+        @event.listens_for(engine, "connect")
+        def _foreign_keys_on(dbapi_connection, _record) -> None:
+            # SQLite does not enforce foreign keys unless this is set on each connection.
+            dbapi_connection.execute("PRAGMA foreign_keys = ON")
+
+        return engine
+    return sqlalchemy.create_engine(
+        sa_url,
+        poolclass=NullPool,
+        isolation_level="AUTOCOMMIT",
+        hide_parameters=True,
+        connect_args={
+            "connect_timeout": PG_CONNECT_TIMEOUT_SECONDS,
+            "options": f"-c lock_timeout={lock_timeout} -c statement_timeout={statement_timeout}",
+        },
+    )
+
+
+def connect_url(url: str) -> Conn:
+    # The module constants are read here, at call time, because tests change them.
+    return engine_for(url, PG_LOCK_TIMEOUT, PG_STATEMENT_TIMEOUT).connect()
+
+
+def connect(path: Path = DB_PATH) -> Conn:
+    return connect_url(f"sqlite:///{path}")

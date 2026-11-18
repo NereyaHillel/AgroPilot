@@ -89,3 +89,9 @@ def test_requests_use_the_url_resolved_at_startup(db_url, monkeypatch):
         response = client.get("/v1/farms")
 
     assert response.status_code == 200
+
+
+def test_settings_class_reads_database_url_from_the_environment(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///x.db")
+
+    assert config.Settings(_env_file=None).database_url == "sqlite:///x.db"
