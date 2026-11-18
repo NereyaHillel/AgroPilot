@@ -7,7 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import DBAPIError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.routing import Route
+from starlette.routing import Match
 
 from db import is_unavailable
 
@@ -22,6 +22,8 @@ FRAMEWORK_CODES = {404: "NOT_FOUND", 405: "VALIDATION"}
 # Python 3.13 renamed the phrase for 422 to "Unprocessable Content". Pin the title so it
 # does not depend on the interpreter version.
 TITLE_OVERRIDES = {422: "Unprocessable Entity"}
+
+HTTP_METHODS = ("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
 
 # The 400 FastAPI raises when it cannot decode a body, such as non-UTF-8 bytes.
 FASTAPI_BODY_READ_ERROR = "There was an error parsing the body"
@@ -113,12 +115,17 @@ async def _handle_http_error(request: Request, exc: StarletteHTTPException) -> J
 
 
 def _allowed_methods(request: Request) -> set[str]:
-    # Starlette reports only the first route matching the path, so combine every match.
-    methods: set[str] = set()
-    for route in request.app.routes:
-        if isinstance(route, Route) and route.path_regex.match(request.url.path):
-            methods |= route.methods
-    return methods
+    # Starlette reports only the first route matching the path, so ask every route which of the
+    # standard methods it would serve. This uses the public matches() API, which still works when
+    # FastAPI keeps included routers as wrappers instead of flattening them into app.routes.
+    return {
+        method
+        for method in HTTP_METHODS
+        if any(
+            route.matches({**request.scope, "method": method})[0] == Match.FULL
+            for route in request.app.routes
+        )
+    }
 
 
 async def _handle_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
