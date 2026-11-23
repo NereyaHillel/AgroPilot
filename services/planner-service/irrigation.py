@@ -4,6 +4,7 @@ Units: depths mm; ET0/ETc mm/day; Zr, h m; theta m3/m3; u2 m/s; RHmin %.
 Capillary rise (CR) is taken as 0. Nothing is rounded.
 """
 
+import math
 from dataclasses import dataclass
 
 
@@ -150,25 +151,42 @@ def irrigation_decision(dr_end: float, raw: float) -> float:
 
 
 TRIGGER_FRACTION = 0.5  # irrigate when the level would fall below this share of the bucket
+# Share of the bucket that is full at the start of day 1, as chosen by the farmer.
+START_FRACTION = {"dry": 0.0, "half": 0.5, "wet": 1.0}
+
+
+MAX_RUN_HOURS = 24  # a plot cannot irrigate longer than a day, so a big refill is split over days
 
 
 @dataclass(frozen=True)
 class BucketDay:
-    need_mm: float   # net irrigation, mm; 0 on a day without irrigation
+    need_mm: float   # net irrigation applied today, mm; 0 on a day without irrigation
     level_end: float  # water in the bucket at the end of the day, mm
+    refilling: bool   # a refill started and the bucket is not full yet; it continues tomorrow
 
 
-def bucket_day(level_prev: float, taw: float, rain: float, etc_mm: float) -> BucketDay:
+def bucket_day(
+    level_prev: float, taw: float, rain: float, etc_mm: float,
+    max_apply_mm: float = math.inf, refilling: bool = False,
+) -> BucketDay:
     """One plan day. Irrigate when the level would fall below half of TAW.
 
-    Level after rain and ET is capped at TAW (excess drains). If it is below
+    Level after rain and ET is capped at TAW (excess drains) and floored at 0
+    (a dry start cannot lose more water than it holds). If it is below
     0.5 x TAW, the irrigation refills the bucket to TAW. Exactly half does not
     trigger. No Ks and no p adjustment: irrigation happens before stress.
+
+    At most max_apply_mm is applied per day. When the refill does not fit, the
+    day ends with refilling=True and the next day continues until the bucket is
+    full, even above the trigger. Rain that fills the bucket ends the refill.
     """
-    level_pre = min(taw, level_prev + rain - etc_mm)
-    if level_pre < TRIGGER_FRACTION * taw:
-        return BucketDay(need_mm=taw - level_pre, level_end=taw)
-    return BucketDay(need_mm=0.0, level_end=level_pre)
+    level_pre = max(0.0, min(taw, level_prev + rain - etc_mm))
+    if not (refilling or level_pre < TRIGGER_FRACTION * taw) or level_pre >= taw:
+        return BucketDay(need_mm=0.0, level_end=level_pre, refilling=False)
+    missing = taw - level_pre
+    if missing <= max_apply_mm:
+        return BucketDay(need_mm=missing, level_end=taw, refilling=False)
+    return BucketDay(need_mm=max_apply_mm, level_end=level_pre + max_apply_mm, refilling=True)
 
 
 def application_rate_mm_h(flow_lph: float, row_spacing_m: float, emitter_spacing_m: float) -> float:

@@ -5,14 +5,17 @@ from conftest import PLOT_ID, assert_problem, forecast_days
 DAY_FIELDS = {"date", "et0_mm", "kc", "need_mm", "litres", "run_minutes", "stale", "bucket_end_mm"}
 
 
-def get_plan(client, days=None, plot_id=PLOT_ID):
-    return client.get(f"/v1/plots/{plot_id}/plan", params={} if days is None else {"days": days})
+def get_plan(client, days=None, plot_id=PLOT_ID, soil_state="wet"):
+    params = {"soil_state": soil_state}
+    if days is not None:
+        params["days"] = days
+    return client.get(f"/v1/plots/{plot_id}/plan", params=params)
 
 
 def test_seven_day_plan_matches_hand_calculation(client):
     # Hand-checked: tomato Kc mid 1.15 x ET0 5.0 = 5.75 mm/day; TAW 58.1 mm (sand 83 x 0.7 m);
-    # trigger 29.05 mm; bucket starts full. Level hits 23.6 on day 6, so need 34.5 mm,
-    # 51 750 L, and 34.5 mm / 1.0 mm/h = 2070 min.
+    # trigger 29.05 mm; bucket starts full. Level hits 23.6 on day 6, so 34.5 mm is needed, but
+    # a day is capped at 24 h x 1.0 mm/h = 24 mm: 24 mm (36 000 L, 1440 min) on day 6, 16.25 mm on day 7.
     response = get_plan(client)
     assert response.status_code == 200
     body = response.json()
@@ -25,10 +28,10 @@ def test_seven_day_plan_matches_hand_calculation(client):
     assert all(set(day) == DAY_FIELDS for day in days)
     assert [day["date"] for day in days][0] == "2026-06-01"
     assert [day["kc"] for day in days] == [1.15] * 7
-    assert [day["need_mm"] for day in days] == [0, 0, 0, 0, 0, 34.5, 0]
-    assert [day["run_minutes"] for day in days] == [0, 0, 0, 0, 0, 2070.0, 0]
-    assert days[5]["litres"] == 51750.0
-    assert [day["bucket_end_mm"] for day in days] == [52.35, 46.6, 40.85, 35.1, 29.35, 58.1, 52.35]
+    assert [day["need_mm"] for day in days] == [0, 0, 0, 0, 0, 24.0, 16.25]
+    assert [day["run_minutes"] for day in days] == [0, 0, 0, 0, 0, 1440.0, 975.0]
+    assert days[5]["litres"] == 36000.0
+    assert [day["bucket_end_mm"] for day in days] == [52.35, 46.6, 40.85, 35.1, 29.35, 47.6, 58.1]
     assert all(day["stale"] is False for day in days)
 
 
@@ -113,3 +116,42 @@ def test_bell_pepper_uses_its_own_parameters(client, world):
 def test_crop_without_parameters_is_422(client, world):
     world.plot["crop_id"] = "wheat"
     assert_problem(get_plan(client), 422, "VALIDATION")
+
+
+def test_soil_state_is_required(client):
+    assert_problem(client.get(f"/v1/plots/{PLOT_ID}/plan"), 422, "VALIDATION")
+
+
+@pytest.mark.parametrize("value", ["", "full", "DRY", "0.5"])
+def test_unknown_soil_state_is_422(client, value):
+    body = assert_problem(get_plan(client, soil_state=value), 422, "VALIDATION")
+    assert "soil_state" in body["detail"]
+
+
+def test_dry_start_irrigates_on_day_1(client):
+    day1 = get_plan(client, soil_state="dry").json()["days"][0]
+    assert (day1["need_mm"], day1["litres"], day1["run_minutes"], day1["bucket_end_mm"]) == (
+        24.0, 36000.0, 1440.0, 24.0,  # capped at 24 h; the refill continues on the next days
+    )
+
+
+def test_half_start_irrigates_on_day_1(client):
+    # level 29.05 - ETc 5.75 = 23.3 < trigger 29.05: 34.8 mm missing, capped at 24 mm (24 h)
+    day1 = get_plan(client, soil_state="half").json()["days"][0]
+    assert (day1["need_mm"], day1["litres"], day1["run_minutes"]) == (24.0, 36000.0, 1440.0)
+
+
+def test_dry_refill_is_split_across_days_at_24_hours_a_day(client):
+    # ETc 5.75. Day 1: 0 -> 24 mm. Day 2: 18.25 -> 42.25. Day 3: 36.5 -> 58.1 (21.6 mm). Day 4: no irrigation.
+    days = get_plan(client, days=4, soil_state="dry").json()["days"]
+    assert [day["need_mm"] for day in days] == [24.0, 24.0, 21.6, 0]
+    assert [day["run_minutes"] for day in days] == [1440.0, 1440.0, 1296.0, 0]
+    assert [day["bucket_end_mm"] for day in days] == [24.0, 42.25, 58.1, 52.35]
+    assert all(day["run_minutes"] <= 24 * 60 for day in days)
+
+
+def test_past_season_plot_holds_kc_end_and_still_splits(client, world):
+    world.plot["planting_date"] = "2025-01-01"
+    days = get_plan(client, days=2, soil_state="dry").json()["days"]
+    assert [day["kc"] for day in days] == [0.8, 0.8]
+    assert [day["need_mm"] for day in days] == [24.0, 24.0]

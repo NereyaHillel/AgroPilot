@@ -1,4 +1,5 @@
 from datetime import date
+from enum import StrEnum
 from typing import Annotated
 
 from pydantic import BaseModel, Field
@@ -6,6 +7,14 @@ from pydantic import BaseModel, Field
 # Upstream numbers must be real numbers: a string, null or NaN is an upstream failure, never a zero.
 Number = Annotated[float, Field(strict=True, allow_inf_nan=False)]
 PositiveNumber = Annotated[float, Field(strict=True, gt=0, allow_inf_nan=False)]
+
+
+class SoilState(StrEnum):
+    """How wet the soil was the day before the plan."""
+
+    dry = "dry"
+    half = "half"
+    wet = "wet"
 
 
 class RegistryPlot(BaseModel):

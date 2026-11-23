@@ -5,15 +5,18 @@ import { Suspense } from "react";
 import { BucketGauge } from "@/components/bucket-gauge";
 import { PlanTimeline, StaleBadge } from "@/components/plan-timeline";
 import { ProblemNotice } from "@/components/problem-notice";
+import { SoilStatePicker } from "@/components/soil-state-picker";
 import { cropName, formatDuration, formatLongDate, formatMm, formatNumber, plotHref } from "@/lib/format";
 import { isSetupProblem, userMessage } from "@/lib/http";
 import { getPlan } from "@/lib/planner";
 import { getPlot } from "@/lib/registry";
+import { parseSoilState, type SoilState } from "@/lib/soil-state";
 import type { Plan, Plot } from "@/lib/types";
 
-export default async function PlotPage({ params }: PageProps<"/plots/[id]">) {
+export default async function PlotPage({ params, searchParams }: PageProps<"/plots/[id]">) {
   await connection();
   const { id } = await params;
+  const soil = parseSoilState((await searchParams).soil);
   const back = (
     <Link href="/" className="text-sm font-bold text-field underline underline-offset-4">
       All plots
@@ -32,7 +35,7 @@ export default async function PlotPage({ params }: PageProps<"/plots/[id]">) {
         <ProblemNotice
           title="This plot is not available"
           detail={message}
-          retryHref={plotHref(id)}
+          retryHref={soil === null ? plotHref(id) : `${plotHref(id)}?soil=${soil}`}
           setup={isSetupProblem(error)}
         />
       </main>
@@ -48,9 +51,25 @@ export default async function PlotPage({ params }: PageProps<"/plots/[id]">) {
         {cropName(plot.crop_id)} planted {formatLongDate(plot.planting_date)}, {formatNumber(plot.area_m2)} m²
       </p>
       {/* The plot header shows at once; the plan streams in when the planner has answered. */}
-      <Suspense fallback={<PlanPending />}>
-        <PlanSection plotId={id} />
-      </Suspense>
+      {soil === null ? (
+        <section aria-labelledby="soil-question" className="mt-5">
+          <h2 id="soil-question" className="mb-3 font-heading text-4xl font-bold leading-[0.95] sm:text-5xl">
+            How wet was the soil yesterday?
+          </h2>
+          <SoilStatePicker plotId={id} selected={null} labelledBy="soil-question" />
+        </section>
+      ) : (
+        <>
+          <div className="mt-5">
+            <p id="soil-label" className="mb-2 text-sm font-bold">Soil the day before</p>
+            <SoilStatePicker plotId={id} selected={soil} labelledBy="soil-label" />
+          </div>
+          {/* Keyed so a new choice shows the pending state again. */}
+          <Suspense key={soil} fallback={<PlanPending />}>
+            <PlanSection plotId={id} soil={soil} />
+          </Suspense>
+        </>
+      )}
     </main>
   );
 }
@@ -66,10 +85,10 @@ function PlanPending() {
   );
 }
 
-async function PlanSection({ plotId }: { plotId: string }) {
+async function PlanSection({ plotId, soil }: { plotId: string; soil: SoilState }) {
   let plan: Plan;
   try {
-    plan = await getPlan(plotId);
+    plan = await getPlan(plotId, soil);
   } catch (error) {
     const message = userMessage(error);
     if (message === null) throw error;
@@ -78,7 +97,7 @@ async function PlanSection({ plotId }: { plotId: string }) {
         <ProblemNotice
           title="Today's plan is not available"
           detail={message}
-          retryHref={plotHref(plotId)}
+          retryHref={`${plotHref(plotId)}?soil=${soil}`}
           setup={isSetupProblem(error)}
         />
       </div>
@@ -90,7 +109,7 @@ async function PlanSection({ plotId }: { plotId: string }) {
         <ProblemNotice
           title="Today's plan is not available"
           detail="The planner answered without any days. Nothing is shown rather than a guess."
-          retryHref={plotHref(plotId)}
+          retryHref={`${plotHref(plotId)}?soil=${soil}`}
         />
       </div>
     );
@@ -138,7 +157,8 @@ function PlanView({ plan }: { plan: Plan }) {
               )}
             </div>
             <BucketGauge
-              level={today.bucket_end_mm}
+              before={today.bucket_end_mm - today.need_mm}
+              added={today.need_mm}
               capacity={plan.bucket_capacity_mm}
               trigger={plan.trigger_mm}
             />

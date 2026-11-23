@@ -2,12 +2,15 @@
 
 from crops import CROP_PLANS
 from errors import ValidationProblem
-from irrigation import TRIGGER_FRACTION, bucket_day, etc, kc_for_day, litres, run_minutes
-from schemas import Forecast, RegistryEmitter, RegistryPlot, RegistrySoil
+from irrigation import (
+    MAX_RUN_HOURS, START_FRACTION, TRIGGER_FRACTION, application_rate_mm_h, bucket_day, etc, kc_for_day, litres,
+    run_minutes,
+)
+from schemas import Forecast, RegistryEmitter, RegistryPlot, RegistrySoil, SoilState
 
 
 def build_plan(
-    plot: RegistryPlot, soil: RegistrySoil, emitter: RegistryEmitter, forecast: Forecast, days: int
+    plot: RegistryPlot, soil: RegistrySoil, emitter: RegistryEmitter, forecast: Forecast, days: int, soil_state: SoilState
 ) -> dict:
     crop = CROP_PLANS.get(plot.crop_id)
     if crop is None:
@@ -16,14 +19,16 @@ def build_plan(
     season_length = stages.ini + stages.dev + stages.mid + stages.late
 
     taw = soil.available_water_mm_per_m * crop.zr_m
-    level = taw  # the bucket starts full at the start of day 1
+    level = START_FRACTION[soil_state] * taw  # the farmer's answer for the day before
+    max_apply_mm = MAX_RUN_HOURS * application_rate_mm_h(emitter.flow_lph, plot.row_spacing_m, plot.emitter_spacing_m)
+    refilling = False
     plan = []
     for day in forecast.days[:days]:
         # Season day 1 is the planting date. Outside the season the curve holds its end values.
         season_day = min(max((day.date - plot.planting_date).days + 1, 1), season_length)
         kc = kc_for_day(season_day, stages, crop.kc_ini, crop.kc_mid, crop.kc_end)
-        result = bucket_day(level, taw, day.rain_mm, etc(kc, day.et0_mm))
-        level = result.level_end
+        result = bucket_day(level, taw, day.rain_mm, etc(kc, day.et0_mm), max_apply_mm, refilling)
+        level, refilling = result.level_end, result.refilling
         plan.append(
             {
                 "date": day.date,
