@@ -64,3 +64,18 @@ def test_seven_day_example_from_the_task():
         level = day.level_end
     assert needs[:5] == [0, 0, 0, 0, 0]
     assert needs[5] == pytest.approx(42.0)  # level 28 after ET, refilled to 70
+
+
+def test_dry_start_floors_level_so_need_is_exactly_taw():
+    # Case 6: dry (level 0), ETc 5.75
+    day = bucket_day(0.0, TAW, 0.0, ETC)
+    assert day.need_mm == pytest.approx(TAW)
+    assert day.level_end == pytest.approx(TAW)
+
+
+def test_dry_start_with_et_larger_than_taw_still_needs_exactly_taw():
+    assert bucket_day(0.0, TAW, 0.0, 100.0).need_mm == pytest.approx(TAW)
+
+
+def test_dry_start_rain_is_counted_and_capped():
+    assert bucket_day(0.0, TAW, 40.0, ETC).level_end == pytest.approx(34.25)

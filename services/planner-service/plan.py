@@ -2,12 +2,12 @@
 
 from crops import CROP_PLANS
 from errors import ValidationProblem
-from irrigation import TRIGGER_FRACTION, bucket_day, etc, kc_for_day, litres, run_minutes
-from schemas import Forecast, RegistryEmitter, RegistryPlot, RegistrySoil
+from irrigation import START_FRACTION, TRIGGER_FRACTION, bucket_day, etc, kc_for_day, litres, run_minutes
+from schemas import Forecast, RegistryEmitter, RegistryPlot, RegistrySoil, SoilState
 
 
 def build_plan(
-    plot: RegistryPlot, soil: RegistrySoil, emitter: RegistryEmitter, forecast: Forecast, days: int
+    plot: RegistryPlot, soil: RegistrySoil, emitter: RegistryEmitter, forecast: Forecast, days: int, soil_state: SoilState
 ) -> dict:
     crop = CROP_PLANS.get(plot.crop_id)
     if crop is None:
@@ -16,7 +16,7 @@ def build_plan(
     season_length = stages.ini + stages.dev + stages.mid + stages.late
 
     taw = soil.available_water_mm_per_m * crop.zr_m
-    level = taw  # the bucket starts full at the start of day 1
+    level = START_FRACTION[soil_state] * taw  # the farmer's answer for the day before
     plan = []
     for day in forecast.days[:days]:
         # Season day 1 is the planting date. Outside the season the curve holds its end values.

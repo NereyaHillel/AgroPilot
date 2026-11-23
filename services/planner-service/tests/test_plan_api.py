@@ -5,8 +5,11 @@ from conftest import PLOT_ID, assert_problem, forecast_days
 DAY_FIELDS = {"date", "et0_mm", "kc", "need_mm", "litres", "run_minutes", "stale", "bucket_end_mm"}
 
 
-def get_plan(client, days=None, plot_id=PLOT_ID):
-    return client.get(f"/v1/plots/{plot_id}/plan", params={} if days is None else {"days": days})
+def get_plan(client, days=None, plot_id=PLOT_ID, soil_state="wet"):
+    params = {"soil_state": soil_state}
+    if days is not None:
+        params["days"] = days
+    return client.get(f"/v1/plots/{plot_id}/plan", params=params)
 
 
 def test_seven_day_plan_matches_hand_calculation(client):
@@ -113,3 +116,26 @@ def test_bell_pepper_uses_its_own_parameters(client, world):
 def test_crop_without_parameters_is_422(client, world):
     world.plot["crop_id"] = "wheat"
     assert_problem(get_plan(client), 422, "VALIDATION")
+
+
+def test_soil_state_is_required(client):
+    assert_problem(client.get(f"/v1/plots/{PLOT_ID}/plan"), 422, "VALIDATION")
+
+
+@pytest.mark.parametrize("value", ["", "full", "DRY", "0.5"])
+def test_unknown_soil_state_is_422(client, value):
+    body = assert_problem(get_plan(client, soil_state=value), 422, "VALIDATION")
+    assert "soil_state" in body["detail"]
+
+
+def test_dry_start_irrigates_on_day_1(client):
+    day1 = get_plan(client, soil_state="dry").json()["days"][0]
+    assert (day1["need_mm"], day1["litres"], day1["run_minutes"], day1["bucket_end_mm"]) == (
+        58.1, 87150.0, 3486.0, 58.1,
+    )
+
+
+def test_half_start_irrigates_on_day_1(client):
+    # level 29.05 - ETc 5.75 = 23.3 < trigger 29.05, so need 34.8 mm
+    day1 = get_plan(client, soil_state="half").json()["days"][0]
+    assert (day1["need_mm"], day1["litres"], day1["run_minutes"]) == (34.8, 52200.0, 2088.0)

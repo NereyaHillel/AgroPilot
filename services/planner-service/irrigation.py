@@ -150,6 +150,8 @@ def irrigation_decision(dr_end: float, raw: float) -> float:
 
 
 TRIGGER_FRACTION = 0.5  # irrigate when the level would fall below this share of the bucket
+# Share of the bucket that is full at the start of day 1, as chosen by the farmer.
+START_FRACTION = {"dry": 0.0, "half": 0.5, "wet": 1.0}
 
 
 @dataclass(frozen=True)
@@ -161,11 +163,12 @@ class BucketDay:
 def bucket_day(level_prev: float, taw: float, rain: float, etc_mm: float) -> BucketDay:
     """One plan day. Irrigate when the level would fall below half of TAW.
 
-    Level after rain and ET is capped at TAW (excess drains). If it is below
+    Level after rain and ET is capped at TAW (excess drains) and floored at 0
+    (a dry start cannot lose more water than it holds). If it is below
     0.5 x TAW, the irrigation refills the bucket to TAW. Exactly half does not
     trigger. No Ks and no p adjustment: irrigation happens before stress.
     """
-    level_pre = min(taw, level_prev + rain - etc_mm)
+    level_pre = max(0.0, min(taw, level_prev + rain - etc_mm))
     if level_pre < TRIGGER_FRACTION * taw:
         return BucketDay(need_mm=taw - level_pre, level_end=taw)
     return BucketDay(need_mm=0.0, level_end=level_pre)
