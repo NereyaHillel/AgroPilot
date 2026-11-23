@@ -15,7 +15,7 @@ A missing `REGISTRY_URL` or `WEATHER_URL` stops startup. `UPSTREAM_TIMEOUT_SECON
 
 ## API
 
-`GET /v1/plots/{id}/plan?days={1..7}` (default 7), starting today. `GET /health` returns `{"status": "ok"}`.
+`GET /v1/plots/{id}/plan?soil_state={dry|half|wet}&days={1..7}` (days default 7), starting today. `soil_state` is required: how wet the soil was the day before (dry starts the bucket at 0, half at half, wet at full). `GET /health` returns `{"status": "ok"}`.
 
 Example (tomato on sand, 1500 m2, 0.6 L/h emitters on 1.5 x 0.4 m, forecast of ET0 5.0 mm and no rain):
 
@@ -55,20 +55,20 @@ All errors are `application/problem+json` with a `code`.
 
 | Status | `code` | When |
 |---|---|---|
-| 422 | `VALIDATION` | `days` not an integer from 1 to 7, or malformed plot id, or a crop with no parameters |
+| 422 | `VALIDATION` | `soil_state` missing or not `dry`/`half`/`wet`, `days` not an integer from 1 to 7, or malformed plot id, or a crop with no parameters |
 | 404 | `NOT_FOUND` | unknown plot |
 | 503 | `UPSTREAM_UNAVAILABLE` | registry-service or weather-service is down, slow, or sends unusable data. `detail` names the service; `Retry-After` is set. Never a plan of zeros |
 | 500 | `INTERNAL` | a bug |
 
 ## How the numbers are calculated
 
-Full rules and three FAO-56 cases plus two planner cases checked by hand: `.claude/skills/irrigation-calc-reference/SKILL.md`. In short, per day: Kc from the growth curve (FAO-56 Eq. 66), ETc = Kc x ET0, a bucket of `available_water_mm_per_m x root depth` that starts full, rain added and ETc removed; when the level would fall below half the bucket, irrigate back to full.
+Full rules and three FAO-56 cases plus two planner cases checked by hand: `.claude/skills/irrigation-calc-reference/SKILL.md`. In short, per day: Kc from the growth curve (FAO-56 Eq. 66), ETc = Kc x ET0, a bucket of `available_water_mm_per_m x root depth` that starts at the farmer's `soil_state`, rain added and ETc removed; when the level would fall below half the bucket, irrigate back to full.
 
 ## Assumptions to know about
 
 Decisions are in `docs/judgment-log.md` entries 10 to 16.
 
-- **The bucket starts full today.** Nobody knows the real soil moisture, so the first days usually say "no need".
+- **The starting level is the farmer's answer** (`soil_state`, required). The planner has no soil-moisture data of its own.
 - **Runs can exceed 24 hours.** Half of a 58 mm bucket on 1 mm/h emitters is about 30 hours. The plan reports it as calculated; no cap exists. This needs a decision.
 - **Plots past the end of the season** (all four seed plots) hold the crop's end Kc.
 - **A stale forecast with fewer days** gives a shorter plan, each day `stale: true`.
@@ -82,7 +82,7 @@ sequenceDiagram
     participant P as planner-service
     participant R as registry-service
     participant W as weather-service
-    F->>P: GET /v1/plots/{id}/plan?days=7
+    F->>P: GET /v1/plots/{id}/plan?soil_state&days=7
     alt days invalid
         P-->>F: 422 VALIDATION
     end

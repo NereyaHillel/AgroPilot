@@ -46,8 +46,8 @@ The plan in `services/planner-service` follows these rules, decided with the use
 |---|---|
 | Bucket size | TAW = available_water_mm_per_m x Zr; Zr fixed: tomato 0.7 m, bell pepper 0.5 m |
 | Trigger | irrigate when the level would fall below 0.5 x TAW (task spec), for both crops; no Ks and no p adjustment in the plan |
-| Start | bucket full (L = TAW) at the start of day 1 of the plan |
-| Day step | L_pre = min(TAW, L_prev + rain - ETc); if L_pre < 0.5 TAW then need = TAW - L_pre (refill to full) and end level = TAW; else need = 0 and end level = L_pre |
+| Start | the farmer's answer for the soil the day before, required, no default: dry L = 0, half L = 0.5 x TAW, wet L = TAW |
+| Day step | L_pre = max(0, min(TAW, L_prev + rain - ETc)); if L_pre < 0.5 TAW then need = TAW - L_pre (refill to full) and end level = TAW; else need = 0 and end level = L_pre |
 | Litres | need_mm x area_m2 (1 mm over 1 m2 = 1 L) |
 | Run time | rate mm/h = flow_lph / (row_spacing_m x emitter_spacing_m); minutes = need_mm / rate x 60 |
 | Season day | (date - planting_date) in days + 1; after the last stage day, hold Kc end |
@@ -56,6 +56,7 @@ The plan in `services/planner-service` follows these rules, decided with the use
 | Rounding | none in the engine; API response: Kc 3 decimals, mm / litres / minutes 2 decimals |
 
 Case 4 (plan, two days). Tomato, sand 83 mm/m, area 1500 m2, row 1.5 m, emitter 0.4 m, 0.6 L/h, season day 100 (Kc 1.15), ET0 5.0 both days, no rain, level entering day 1 = 33 mm (given for this check; a real plan starts full). TAW = **58.1**, trigger 29.05, rate = **1.0 mm/h**. Day 1: ETc 5.75, L_pre 27.25 < 29.05, so need = **30.85 mm**, litres **46,275**, minutes **1,851**, end level 58.1. Day 2: L_pre = 52.35 >= 29.05, so need 0, minutes 0, end level **52.35**.
+Case 6 (dry start). Same plot as case 4, farmer chose dry, so level entering day 1 = 0: L_pre = max(0, 0 - 5.75) = 0 < 29.05, so need = **58.1 mm** (TAW, not TAW + ETc), litres **87,150**, minutes **3,486**, end level 58.1. Half start (29.05): L_pre = 23.3, need **34.8 mm**, litres 52,200, minutes 2,088.
 Case 5 (rain). Same plot, level 40, rain 12, ET0 5.0: L_pre = 40 + 12 - 5.75 = **46.25**, no irrigation.
 
 ## Still open (ask, do not invent)
