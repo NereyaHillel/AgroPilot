@@ -7,16 +7,11 @@ import { cn } from "@/lib/utils";
 /** The soil the day before, as three links so it works without client JS and survives a refresh. */
 export function SoilStatePicker({ plotId, selected }: { plotId: string; selected: SoilState | null }) {
   return (
-    <div
-      role="radiogroup"
-      aria-label="Soil the day before"
-      className="grid grid-cols-3 gap-2"
-    >
+    <div role="group" aria-label="Soil the day before" className="grid grid-cols-3 gap-2">
       {SOIL_STATES.map((state) => (
         <Link
           key={state}
-          role="radio"
-          aria-checked={state === selected}
+          aria-current={state === selected ? "true" : undefined}
           href={`${plotHref(plotId)}?soil=${state}`}
           className={cn(
             buttonVariants({ variant: state === selected ? "default" : "outline", size: "lg" }),
