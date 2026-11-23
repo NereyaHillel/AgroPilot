@@ -77,5 +77,56 @@ def test_dry_start_with_et_larger_than_taw_still_needs_exactly_taw():
     assert bucket_day(0.0, TAW, 0.0, 100.0).need_mm == pytest.approx(TAW)
 
 
-def test_dry_start_rain_is_counted_and_capped():
+def test_dry_start_rain_is_counted():
     assert bucket_day(0.0, TAW, 40.0, ETC).level_end == pytest.approx(34.25)
+
+
+def test_dry_start_rain_beyond_full_is_capped_at_taw():
+    day = bucket_day(0.0, TAW, 100.0, ETC)
+    assert day.need_mm == 0.0
+    assert day.level_end == pytest.approx(TAW)
+
+
+# Daily cap: a refill is spread over days, at most max_apply_mm a day (24 h of run time).
+CAP = 24.0
+ETC_4 = 4.0  # Kc end 0.80 x ET0 5.0
+
+
+def test_refill_is_capped_per_day_and_keeps_going():
+    day = bucket_day(0.0, TAW, 0.0, ETC_4, max_apply_mm=CAP)
+    assert day.need_mm == pytest.approx(24.0)
+    assert day.level_end == pytest.approx(24.0)
+    assert day.refilling is True
+
+
+def test_refill_continues_next_day_even_when_level_is_below_trigger_still():
+    day = bucket_day(24.0, TAW, 0.0, ETC_4, max_apply_mm=CAP, refilling=True)
+    assert day.need_mm == pytest.approx(24.0)  # level 20 + 24
+    assert day.level_end == pytest.approx(44.0)
+    assert day.refilling is True
+
+
+def test_last_refill_day_applies_only_what_is_missing():
+    day = bucket_day(44.0, TAW, 0.0, ETC_4, max_apply_mm=CAP, refilling=True)
+    assert day.need_mm == pytest.approx(18.1)
+    assert day.level_end == pytest.approx(TAW)
+    assert day.refilling is False
+
+
+def test_refill_continues_above_the_trigger():
+    day = bucket_day(35.0, TAW, 0.0, ETC_4, max_apply_mm=CAP, refilling=True)  # level 31 > 29.05
+    assert day.need_mm == pytest.approx(24.0)
+    assert day.level_end == pytest.approx(55.0)
+
+
+def test_rain_that_fills_the_bucket_ends_the_refill():
+    day = bucket_day(44.0, TAW, 100.0, ETC_4, max_apply_mm=CAP, refilling=True)
+    assert day.need_mm == 0.0
+    assert day.level_end == pytest.approx(TAW)
+    assert day.refilling is False
+
+
+def test_no_cap_by_default_refills_in_one_day():
+    day = bucket_day(0.0, TAW, 0.0, ETC_4)
+    assert day.need_mm == pytest.approx(TAW)
+    assert day.refilling is False

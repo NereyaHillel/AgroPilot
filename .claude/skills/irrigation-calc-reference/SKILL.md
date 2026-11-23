@@ -47,7 +47,9 @@ The plan in `services/planner-service` follows these rules, decided with the use
 | Bucket size | TAW = available_water_mm_per_m x Zr; Zr fixed: tomato 0.7 m, bell pepper 0.5 m |
 | Trigger | irrigate when the level would fall below 0.5 x TAW (task spec), for both crops; no Ks and no p adjustment in the plan |
 | Start | the farmer's answer for the soil the day before, required, no default: dry L = 0, half L = 0.5 x TAW, wet L = TAW |
-| Day step | L_pre = max(0, min(TAW, L_prev + rain - ETc)); if L_pre < 0.5 TAW then need = TAW - L_pre (refill to full) and end level = TAW; else need = 0 and end level = L_pre |
+| Day step | L_pre = max(0, min(TAW, L_prev + rain - ETc)); if L_pre < 0.5 TAW, or a refill is in progress and L_pre < TAW, then missing = TAW - L_pre and need = min(missing, daily cap); end level = L_pre + need; else need = 0 and end level = L_pre |
+| Daily cap | a day runs at most 24 h: cap mm = 24 x rate mm/h. A refill that does not fit is split over days: it stays in progress (even above the trigger) until the bucket is full; rain that fills the bucket ends it |
+| Past the season | Kc holds Kc end (tomato 0.80, bell pepper 0.90); the plot is not rejected |
 | Litres | need_mm x area_m2 (1 mm over 1 m2 = 1 L) |
 | Run time | rate mm/h = flow_lph / (row_spacing_m x emitter_spacing_m); minutes = need_mm / rate x 60 |
 | Season day | (date - planting_date) in days + 1; after the last stage day, hold Kc end |
@@ -55,9 +57,10 @@ The plan in `services/planner-service` follows these rules, decided with the use
 | Not applied | Eq. 62/65 climate adjustment (no wind or humidity in the forecast), fw scaling of Kc ini, ignoring small rain, runoff |
 | Rounding | none in the engine; API response: Kc 3 decimals, mm / litres / minutes 2 decimals |
 
-Case 4 (plan, two days). Tomato, sand 83 mm/m, area 1500 m2, row 1.5 m, emitter 0.4 m, 0.6 L/h, season day 100 (Kc 1.15), ET0 5.0 both days, no rain, level entering day 1 = 33 mm (given for this check; a real plan starts full). TAW = **58.1**, trigger 29.05, rate = **1.0 mm/h**. Day 1: ETc 5.75, L_pre 27.25 < 29.05, so need = **30.85 mm**, litres **46,275**, minutes **1,851**, end level 58.1. Day 2: L_pre = 52.35 >= 29.05, so need 0, minutes 0, end level **52.35**.
-Case 6 (dry start). Same plot as case 4, farmer chose dry, so level entering day 1 = 0: L_pre = max(0, 0 - 5.75) = 0 < 29.05, so need = **58.1 mm** (TAW, not TAW + ETc), litres **87,150**, minutes **3,486**, end level 58.1. Half start (29.05): L_pre = 23.3, need **34.8 mm**, litres 52,200, minutes 2,088.
+Case 4 (plan, two days). Tomato, sand 83 mm/m, area 1500 m2, row 1.5 m, emitter 0.4 m, 0.6 L/h, season day 100 (Kc 1.15), ET0 5.0 both days, no rain, level entering day 1 = 33 mm (given for this check; a real plan starts at the farmer's soil state). TAW = **58.1**, trigger 29.05, rate = **1.0 mm/h**. Day 1: ETc 5.75, L_pre 27.25 < 29.05, so need = **30.85 mm**, litres **46,275**, minutes **1,851**, end level 58.1. Day 2: L_pre = 52.35 >= 29.05, so need 0, minutes 0, end level **52.35**.
 Case 5 (rain). Same plot, level 40, rain 12, ET0 5.0: L_pre = 40 + 12 - 5.75 = **46.25**, no irrigation.
+Case 6 (dry start). Same plot as case 4, farmer chose dry, so level entering day 1 = 0: L_pre = max(0, 0 - 5.75) = 0 < 29.05, so 58.1 mm is missing (TAW, not TAW + ETc). The cap is 24 h x 1.0 mm/h = 24 mm, so day 1 applies **24 mm** (36,000 L, 1,440 min), end level 24. Half start (29.05): L_pre = 23.3, 34.8 mm missing, day 1 applies **24 mm**.
+Case 7 (refill split over days). Case 6 plot, dry, ETc 5.75 each day, no rain. Day 1: 0 -> apply 24 -> 24. Day 2: L_pre 18.25, refill in progress, apply 24 -> **42.25**. Day 3: L_pre 36.5 (above the trigger, still refilling), missing 21.6 <= 24, apply **21.6** (1,296 min) -> 58.1, refill ends. Day 4: L_pre 52.35, need 0. West block (dry, Kc end 0.80, ET0 5.0, ETc 4.0): 24 h, 24 h, 18 h 6 min (18.1 mm).
 
 ## Still open (ask, do not invent)
-Whether a past-season plot should hold Kc end (current rule) or be rejected; plans longer than 24 h of run time per day (the rules can produce them, e.g. case 4 is about 31 h); shorter plans when a stale forecast has fewer days. Annex 8 is the dual Kc (Kcb + Ke) with unverified formula mapping, so it is a structure guide only.
+Shorter plans when a stale forecast has fewer days. Annex 8 is the dual Kc (Kcb + Ke) with unverified formula mapping, so it is a structure guide only.

@@ -35,7 +35,7 @@ export default async function PlotPage({ params, searchParams }: PageProps<"/plo
         <ProblemNotice
           title="This plot is not available"
           detail={message}
-          retryHref={plotHref(id)}
+          retryHref={soil === null ? plotHref(id) : `${plotHref(id)}?soil=${soil}`}
           setup={isSetupProblem(error)}
         />
       </main>
@@ -56,13 +56,13 @@ export default async function PlotPage({ params, searchParams }: PageProps<"/plo
           <h2 id="soil-question" className="mb-3 font-heading text-4xl font-bold leading-[0.95] sm:text-5xl">
             How wet was the soil yesterday?
           </h2>
-          <SoilStatePicker plotId={id} selected={null} />
+          <SoilStatePicker plotId={id} selected={null} labelledBy="soil-question" />
         </section>
       ) : (
         <>
           <div className="mt-5">
-            <p className="mb-2 text-sm font-bold">Soil the day before</p>
-            <SoilStatePicker plotId={id} selected={soil} />
+            <p id="soil-label" className="mb-2 text-sm font-bold">Soil the day before</p>
+            <SoilStatePicker plotId={id} selected={soil} labelledBy="soil-label" />
           </div>
           {/* Keyed so a new choice shows the pending state again. */}
           <Suspense key={soil} fallback={<PlanPending />}>
@@ -157,7 +157,8 @@ function PlanView({ plan }: { plan: Plan }) {
               )}
             </div>
             <BucketGauge
-              level={today.bucket_end_mm}
+              before={today.bucket_end_mm - today.need_mm}
+              added={today.need_mm}
               capacity={plan.bucket_capacity_mm}
               trigger={plan.trigger_mm}
             />

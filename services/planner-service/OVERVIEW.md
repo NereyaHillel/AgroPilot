@@ -101,7 +101,7 @@ A missing URL stops startup with the variable named.
 ## Assumptions and open decisions
 
 - **The starting level is the farmer's answer** (`soil_state`, required). The service is stateless and the registry holds no soil moisture, so it cannot know the real level; a wrong answer gives a wrong first days.
-- **Run times can exceed 24 hours.** Half of a 58 mm bucket on 1 mm/h emitters is about 30 hours. The plan reports it as calculated, with no cap.
+- **A day runs at most 24 hours.** `need_mm` is capped at 24 h x the application rate. A refill that does not fit stays in progress and continues the next days until the bucket is full, even above the trigger; rain that fills the bucket ends it.
 - **Plots past the end of the season** (all four seed plots) use the crop's end Kc.
 - **Simplifications:** no Ks stress factor and no p adjustment in the plan loop (irrigation triggers before stress), no wind or humidity correction of Kc, no drip scaling of Kc ini, no runoff or capillary rise.
 - `irrigation.py` also holds the fuller FAO-56 daily step (`daily_soil_step`, with Ks and adjusted p) that the plan loop does not use. Keep it only if it backs the reference cases in the skill.

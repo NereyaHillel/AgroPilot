@@ -8,7 +8,7 @@ Turns a plot (registry-service) and its weather forecast (weather-service) into 
 cp .env.example .env     # set REGISTRY_URL and WEATHER_URL
 export $(grep -v '^#' .env | xargs)
 uv run uvicorn main:app --port 8002
-uv run pytest            # 79 tests, no network: both services are faked
+uv run pytest            # 98 tests, no network: both services are faked
 ```
 
 A missing `REGISTRY_URL` or `WEATHER_URL` stops startup. `UPSTREAM_TIMEOUT_SECONDS` (default 10) bounds each upstream call.
@@ -62,14 +62,14 @@ All errors are `application/problem+json` with a `code`.
 
 ## How the numbers are calculated
 
-Full rules and three FAO-56 cases plus two planner cases checked by hand: `.claude/skills/irrigation-calc-reference/SKILL.md`. In short, per day: Kc from the growth curve (FAO-56 Eq. 66), ETc = Kc x ET0, a bucket of `available_water_mm_per_m x root depth` that starts at the farmer's `soil_state`, rain added and ETc removed; when the level would fall below half the bucket, irrigate back to full.
+Full rules and three FAO-56 cases plus four planner cases (4 to 7) checked by hand: `.claude/skills/irrigation-calc-reference/SKILL.md`. In short, per day: Kc from the growth curve (FAO-56 Eq. 66), ETc = Kc x ET0, a bucket of `available_water_mm_per_m x root depth` that starts at the farmer's `soil_state`, rain added and ETc removed; when the level would fall below half the bucket, irrigate back to full.
 
 ## Assumptions to know about
 
 Decisions are in `docs/judgment-log.md` entries 10 to 16.
 
 - **The starting level is the farmer's answer** (`soil_state`, required). The planner has no soil-moisture data of its own.
-- **Runs can exceed 24 hours.** Half of a 58 mm bucket on 1 mm/h emitters is about 30 hours. The plan reports it as calculated; no cap exists. This needs a decision.
+- **A day runs at most 24 hours.** A refill that needs more is split over days: it continues every day, even above the half-bucket trigger, until the bucket is full. A dry 58 mm sand bucket on 1 mm/h emitters takes three days (24 h, 24 h, then the rest). Rain that fills the bucket ends the refill.
 - **Plots past the end of the season** (all four seed plots) hold the crop's end Kc.
 - **A stale forecast with fewer days** gives a shorter plan, each day `stale: true`.
 - No wind or humidity correction of Kc (the forecast has none), no drip scaling of Kc ini, no runoff.
@@ -83,7 +83,7 @@ sequenceDiagram
     participant R as registry-service
     participant W as weather-service
     F->>P: GET /v1/plots/{id}/plan?soil_state&days=7
-    alt days invalid
+    alt days or soil_state invalid
         P-->>F: 422 VALIDATION
     end
     P->>R: GET /v1/plots/{id}

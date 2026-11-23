@@ -16,7 +16,8 @@ export function StaleBadge() {
 
 /**
  * One row per day. The planner's first day is today by contract, so it is labelled so.
- * Water days are written in words; the bar shows the soil at the end of the day.
+ * Water days are written in words; the bar shows the soil before irrigation, with what
+ * irrigation adds on top in a lighter shade.
  */
 export function PlanTimeline({ plan }: { plan: Plan }) {
   return (
@@ -24,6 +25,7 @@ export function PlanTimeline({ plan }: { plan: Plan }) {
       {plan.days.map((day, index) => {
         const waters = day.run_minutes > 0;
         const { weekday, date } = dayParts(day.date);
+        const before = day.bucket_end_mm - day.need_mm;
         return (
           <li key={day.date} className="grid grid-cols-[4.75rem_1fr] gap-x-3 border-b border-dashed py-3">
             <div className="leading-tight">
@@ -42,15 +44,22 @@ export function PlanTimeline({ plan }: { plan: Plan }) {
                   {formatNumber(day.litres)} litres, {formatMm(day.need_mm)}
                 </p>
               )}
-              <div className="mt-2 flex items-center gap-3">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                 <div
                   role="img"
-                  aria-label={`Soil at day's end: ${formatMm(day.bucket_end_mm)} of ${formatMm(plan.bucket_capacity_mm)}`}
-                  className="relative h-3 w-full max-w-60 overflow-hidden rounded-sm border border-soil bg-card"
+                  aria-label={`Soil before irrigation: ${formatMm(before)} of ${formatMm(plan.bucket_capacity_mm)}${waters ? `, irrigation adds ${formatMm(day.need_mm)}` : ""}`}
+                  className="relative h-3 w-60 max-w-full shrink-0 overflow-hidden rounded-sm border border-soil bg-card"
                 >
                   <div
                     className="absolute inset-y-0 left-0 bg-water"
-                    style={{ width: `${percentOf(day.bucket_end_mm, plan.bucket_capacity_mm)}%` }}
+                    style={{ width: `${percentOf(before, plan.bucket_capacity_mm)}%` }}
+                  />
+                  <div
+                    className="absolute inset-y-0 bg-water/35"
+                    style={{
+                      left: `${percentOf(before, plan.bucket_capacity_mm)}%`,
+                      width: `${percentOf(day.need_mm, plan.bucket_capacity_mm)}%`,
+                    }}
                   />
                   <div
                     className="absolute inset-y-0 border-l-2 border-dashed border-soil"
@@ -58,7 +67,7 @@ export function PlanTimeline({ plan }: { plan: Plan }) {
                   />
                 </div>
                 <p className="tabular shrink-0 text-sm text-muted-foreground">
-                  {formatMm(day.bucket_end_mm)} in soil
+                  {formatMm(before)} in soil{waters ? `, +${formatMm(day.need_mm)}` : ""}
                 </p>
               </div>
             </div>

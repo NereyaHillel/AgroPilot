@@ -29,7 +29,7 @@ The browser never calls `:8000`, `:8001` or `:8002`. Pages are Server Components
 | `src/lib/http.ts` | `getJson`: timeouts, parsing of `problem+json` errors, `ServiceError` carrying the service name and a safe message |
 | `src/lib/registry.ts`, `planner.ts`, `health.ts` | Typed API clients. Timeouts: registry 5 s, planner 20 s (it may wait for weather retries), health 2 s |
 | `src/lib/types.ts`, `format.ts` | Response types and number, date and duration formatting |
-| `src/components/` | `soil-state-picker` (Dry / Half / Wet links), `plan-timeline` (7-day table and stale badge), `bucket-gauge` (soil level against the trigger line), `problem-notice` (error banner), `status-line` (health bar), plus shadcn `ui/` pieces |
+| `src/components/` | `soil-state-picker` (Dry / Half / Wet links), `plan-timeline` (7-day table and stale badge), `bucket-gauge` (soil level before irrigation, with what irrigation adds on top, against the trigger line), `problem-notice` (error banner), `status-line` (health bar), plus shadcn `ui/` pieces |
 
 ## How a plot page works
 
@@ -38,7 +38,7 @@ The browser never calls `:8000`, `:8001` or `:8002`. Pages are Server Components
 3. The farmer picks Dry, Half or Wet for the soil the day before (`?soil=` in the URL, no default). Until then the page shows only that question. Then `getPlan(id, soil)` asks the planner for 7 days.
 4. If `today.run_minutes > 0` the page shows "Water for N minutes" with litres and mm. Otherwise "No irrigation today" with how much water the soil holds.
 5. A stale flag on today shows a warning badge beside the numbers. The timeline marks stale days the same way.
-6. The gauge shows the soil level and a dashed line where irrigation triggers (`trigger_mm` from the plan).
+6. The gauge shows the soil level before irrigation (`bucket_end_mm − need_mm`), what irrigation adds on top in a lighter shade, and a dashed line where irrigation triggers (`trigger_mm` from the plan). Each timeline row draws the same two-tone bar.
 
 The page uses the number of days the planner returned, not a hard-coded 7, because a stale forecast can give a shorter plan.
 
