@@ -1,0 +1,89 @@
+name: deploy-frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - services/frontend/**
+      - .github/workflows/deploy-frontend.yaml
+  workflow_dispatch:
+
+# All deploy pipelines share one instance and one checkout on it: run them one at a time.
+concurrency:
+  group: deploy-instance
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Deploy frontend
+        uses: appleboy/ssh-action@v1.2.5
+        env:
+          # Lets the instance clone/fetch even if the repo is private. Sent as a header, never stored in .git/config.
+          GH_TOKEN: ${{ github.token }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: GH_TOKEN
+          # npm ci + next build on a t3.medium can pass the 10m default on a clean instance.
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
+            REPO_DIR=/home/ubuntu/AgroPilot
+            SERVICE_DIR="$REPO_DIR/services/frontend"
+            NODE_VERSION=22.23.4
+            NODE_DIR="/opt/node-v$NODE_VERSION-linux-x64"
+
+            # Auth header for git via env vars, so the token is not in argv or on disk.
+            export GIT_CONFIG_COUNT=1
+            export GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
+            export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+
+            # First run: no repo yet.
+            if [ ! -d "$REPO_DIR/.git" ]; then
+              git clone https://github.com/${{ github.repository }}.git "$REPO_DIR"
+            fi
+            cd "$REPO_DIR"
+            git fetch origin main
+            git reset --hard ${{ github.sha }}
+
+            # First run: no Node yet. Ubuntu's apt Node is too old for Next 16, so use the official build.
+            if [ ! -x "$NODE_DIR/bin/node" ]; then
+              curl -fsSL "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.xz" | sudo tar -xJ -C /opt
+            fi
+            sudo ln -sf "$NODE_DIR/bin/node" "$NODE_DIR/bin/npm" "$NODE_DIR/bin/npx" /usr/local/bin/
+
+            cd "$SERVICE_DIR"
+
+            # Rewrite .env.local from scratch on every run, readable only by ubuntu.
+            umask 077
+            printf '%s\n' \
+              'REGISTRY_URL=http://127.0.0.1:8000' \
+              'WEATHER_URL=http://127.0.0.1:8001' \
+              'PLANNER_URL=http://127.0.0.1:8002' > .env.local
+            umask 022
+
+            # One production build per deploy; the unit serves it with npm run start.
+            npm ci --no-audit --no-fund
+            npm run build
+
+            sudo install -m 644 frontend.service /etc/systemd/system/frontend.service
+            sudo systemctl daemon-reload
+            sudo systemctl enable frontend.service
+            sudo systemctl restart frontend.service
+
+            # restart returns before Next is up; fail the job if the home page never answers.
+            for i in $(seq 1 30); do
+              if curl -fsS -o /dev/null http://127.0.0.1:3000/; then
+                echo "frontend is healthy"
+                exit 0
+              fi
+              sleep 1
+            done
+            echo "frontend failed its health check" >&2
+            sudo journalctl -u frontend.service -n 50 --no-pager >&2
+            exit 1

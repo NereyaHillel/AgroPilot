@@ -1,0 +1,14 @@
+[Unit]
+Description=AgroPilot frontend
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/AgroPilot/services/frontend
+Environment=NODE_ENV=production
+# The only service that listens on all interfaces. The pipeline runs npm run build before each restart.
+ExecStart=/usr/local/bin/npm run start -- --hostname 0.0.0.0 --port 3000
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
