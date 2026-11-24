@@ -1,0 +1,81 @@
+name: deploy-weather
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - services/weather-service/**
+      - .github/workflows/deploy-weather.yaml
+  workflow_dispatch:
+
+# All deploy pipelines share one instance and one checkout on it: run them one at a time.
+concurrency:
+  group: deploy-instance
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Deploy weather-service
+        uses: appleboy/ssh-action@v1.2.5
+        env:
+          # Lets the instance clone/fetch even if the repo is private. Sent as a header, never stored in .git/config.
+          GH_TOKEN: ${{ github.token }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: GH_TOKEN
+          script: |
+            set -euo pipefail
+            REPO_DIR=/home/ubuntu/AgroPilot
+            SERVICE_DIR="$REPO_DIR/services/weather-service"
+            UV=/home/ubuntu/.local/bin/uv
+
+            # Auth header for git via env vars, so the token is not in argv or on disk.
+            export GIT_CONFIG_COUNT=1
+            export GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
+            export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+
+            # First run: no repo yet.
+            if [ ! -d "$REPO_DIR/.git" ]; then
+              git clone https://github.com/${{ github.repository }}.git "$REPO_DIR"
+            fi
+            cd "$REPO_DIR"
+            git fetch origin main
+            git reset --hard ${{ github.sha }}
+
+            # First run: no uv yet.
+            if [ ! -x "$UV" ]; then
+              curl -LsSf https://astral.sh/uv/install.sh | sh
+            fi
+
+            cd "$SERVICE_DIR"
+            "$UV" sync --locked
+
+            # Rewrite .env from scratch on every run, readable only by ubuntu.
+            umask 077
+            # Provider settings only, no secrets: the committed example is the production config.
+            cp .env.example .env
+            umask 022
+
+            sudo install -m 644 weather.service /etc/systemd/system/weather.service
+            sudo systemctl daemon-reload
+            sudo systemctl enable weather.service
+            sudo systemctl restart weather.service
+
+            # restart returns before uvicorn is up; fail the job if /health never answers.
+            for i in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1:8001/health; then
+                echo
+                echo "weather-service is healthy"
+                exit 0
+              fi
+              sleep 1
+            done
+            echo "weather-service failed its health check" >&2
+            sudo journalctl -u weather.service -n 50 --no-pager >&2
+            exit 1

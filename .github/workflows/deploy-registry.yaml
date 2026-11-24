@@ -3,6 +3,15 @@ name: deploy-registry
 on:
   push:
     branches: [main]
+    paths:
+      - services/registry-service/**
+      - .github/workflows/deploy-registry.yaml
+  workflow_dispatch:
+
+# All deploy pipelines share one instance and one checkout on it: run them one at a time.
+concurrency:
+  group: deploy-instance
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -10,24 +19,33 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Deploy registry-service
+      - name: Deploy PostgreSQL and registry-service
         uses: appleboy/ssh-action@v1.2.5
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           # Lets the instance clone/fetch even if the repo is private. Sent as a header, never stored in .git/config.
           GH_TOKEN: ${{ github.token }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: DATABASE_URL,GH_TOKEN
+          envs: POSTGRES_PASSWORD,GH_TOKEN
+          command_timeout: 20m
           script: |
             set -euo pipefail
             REPO_DIR=/home/ubuntu/AgroPilot
             SERVICE_DIR="$REPO_DIR/services/registry-service"
             UV=/home/ubuntu/.local/bin/uv
+            PG_CONTAINER=agropilot-postgres
+            PG_USER=agropilot
+            PG_DB=registry
 
-            : "${DATABASE_URL:?DATABASE_URL secret is not set}"
+            : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD secret is not set}"
+            # It goes into DATABASE_URL, so keep it URL-safe.
+            if ! [[ "$POSTGRES_PASSWORD" =~ ^[A-Za-z0-9]+$ ]]; then
+              echo "POSTGRES_PASSWORD must contain only letters and digits" >&2
+              exit 1
+            fi
 
             # Auth header for git via env vars, so the token is not in argv or on disk.
             export GIT_CONFIG_COUNT=1
@@ -42,6 +60,42 @@ jobs:
             git fetch origin main
             git reset --hard ${{ github.sha }}
 
+            # First run: no Docker yet.
+            if ! command -v docker >/dev/null; then
+              sudo apt-get update -q
+              sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q docker.io
+              sudo systemctl enable --now docker
+            fi
+
+            # PostgreSQL: official image, named volume (data survives the container), published on 127.0.0.1 only.
+            # POSTGRES_PASSWORD only takes effect the first time the volume is initialised.
+            if ! sudo docker container inspect "$PG_CONTAINER" >/dev/null 2>&1; then
+              sudo --preserve-env=POSTGRES_PASSWORD docker run -d \
+                --name "$PG_CONTAINER" \
+                --restart unless-stopped \
+                -v agropilot-pgdata:/var/lib/postgresql/data \
+                -p 127.0.0.1:5432:5432 \
+                -e POSTGRES_USER="$PG_USER" \
+                -e POSTGRES_DB="$PG_DB" \
+                -e POSTGRES_PASSWORD \
+                postgres:16
+            else
+              sudo docker start "$PG_CONTAINER" >/dev/null
+            fi
+
+            # -h 127.0.0.1: during first-time init the server is on the socket only, so this waits for the real start.
+            for i in $(seq 1 60); do
+              if sudo docker exec "$PG_CONTAINER" pg_isready -q -h 127.0.0.1 -U "$PG_USER" -d "$PG_DB"; then
+                break
+              fi
+              if [ "$i" -eq 60 ]; then
+                echo "PostgreSQL did not become ready" >&2
+                sudo docker logs --tail 50 "$PG_CONTAINER" >&2
+                exit 1
+              fi
+              sleep 1
+            done
+
             # First run: no uv yet.
             if [ ! -x "$UV" ]; then
               curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -52,16 +106,24 @@ jobs:
 
             # Rewrite .env from scratch on every run, readable only by ubuntu.
             umask 077
-            printf 'DATABASE_URL=%s\n' "$DATABASE_URL" > .env
+            printf 'DATABASE_URL=postgresql://%s:%s@127.0.0.1:5432/%s\n' "$PG_USER" "$POSTGRES_PASSWORD" "$PG_DB" > .env
+            umask 022
+
+            # Create and seed the tables on an empty database only (the seed script refuses a non-empty one).
+            HAS_TABLES="$(sudo docker exec "$PG_CONTAINER" psql -U "$PG_USER" -d "$PG_DB" -tAc "SELECT to_regclass('public.farms') IS NOT NULL")"
+            if [ "$HAS_TABLES" != "t" ]; then
+              "$UV" run --locked python seed_registry_pg.py
+            fi
 
             sudo install -m 644 registry.service /etc/systemd/system/registry.service
             sudo systemctl daemon-reload
             sudo systemctl enable registry.service
             sudo systemctl restart registry.service
 
-            # restart returns before uvicorn is up; fail the job if /health never answers.
+            # restart returns before uvicorn is up; fail the job if the service never answers.
+            # /v1/farms reads the database, so it also proves the connection to PostgreSQL.
             for i in $(seq 1 30); do
-              if curl -fsS http://127.0.0.1:8000/health; then
+              if curl -fsS http://127.0.0.1:8000/health && curl -fsS -o /dev/null http://127.0.0.1:8000/v1/farms; then
                 echo
                 echo "registry-service is healthy"
                 exit 0
