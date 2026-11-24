@@ -7,18 +7,67 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Deploy registry-service
         uses: appleboy/ssh-action@v1.2.5
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Lets the instance clone/fetch even if the repo is private. Sent as a header, never stored in .git/config.
+          GH_TOKEN: ${{ github.token }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: DATABASE_URL,GH_TOKEN
           script: |
-            set -e
-            cd /home/ubuntu/ArgoPilot
+            set -euo pipefail
+            REPO_DIR=/home/ubuntu/AgroPilot
+            SERVICE_DIR="$REPO_DIR/services/registry-service"
+            UV=/home/ubuntu/.local/bin/uv
+
+            : "${DATABASE_URL:?DATABASE_URL secret is not set}"
+
+            # Auth header for git via env vars, so the token is not in argv or on disk.
+            export GIT_CONFIG_COUNT=1
+            export GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
+            export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+
+            # First run: no repo yet.
+            if [ ! -d "$REPO_DIR/.git" ]; then
+              git clone https://github.com/${{ github.repository }}.git "$REPO_DIR"
+            fi
+            cd "$REPO_DIR"
             git fetch origin main
             git reset --hard ${{ github.sha }}
-            cd services/registry-service
-            /home/ubuntu/.local/bin/uv sync --locked
+
+            # First run: no uv yet.
+            if [ ! -x "$UV" ]; then
+              curl -LsSf https://astral.sh/uv/install.sh | sh
+            fi
+
+            cd "$SERVICE_DIR"
+            "$UV" sync --locked
+
+            # Rewrite .env from scratch on every run, readable only by ubuntu.
+            umask 077
+            printf 'DATABASE_URL=%s\n' "$DATABASE_URL" > .env
+
+            sudo install -m 644 registry.service /etc/systemd/system/registry.service
+            sudo systemctl daemon-reload
+            sudo systemctl enable registry.service
             sudo systemctl restart registry.service
+
+            # restart returns before uvicorn is up; fail the job if /health never answers.
+            for i in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1:8000/health; then
+                echo
+                echo "registry-service is healthy"
+                exit 0
+              fi
+              sleep 1
+            done
+            echo "registry-service failed its health check" >&2
+            sudo journalctl -u registry.service -n 50 --no-pager >&2
+            exit 1
