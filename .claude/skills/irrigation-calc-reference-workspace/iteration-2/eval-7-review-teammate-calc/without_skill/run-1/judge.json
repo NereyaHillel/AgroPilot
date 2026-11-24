@@ -1,0 +1,22 @@
+{
+ "fw": [
+  true,
+  "fw only via Kc ini (Eq. 60) or Ke"
+ ],
+ "p": [
+  true,
+  "p not adjusted; 0.1-0.8"
+ ],
+ "ks_unused": [
+  true,
+  "ks computed but never used (Eq. 80/81)"
+ ],
+ "ks_timing": [
+  true,
+  "end-of-day instead of start-of-day"
+ ],
+ "clamp_dp": [
+  true,
+  "not kept between 0 and TAW, drainage never counted"
+ ]
+}

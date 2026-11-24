@@ -1,0 +1,35 @@
+{
+  "expectations": [
+    {
+      "text": "Flags that fw should not scale Kc mid (only Kc ini, Eq. 60)",
+      "passed": true,
+      "evidence": "only Kc ini scaled, Eq. 60"
+    },
+    {
+      "text": "Flags missing p adjustment for ETc (and 0.1-0.8 clamp)",
+      "passed": true,
+      "evidence": "p = 0.30 + 0.04(5-ETc), clamp 0.1..0.8"
+    },
+    {
+      "text": "Flags that Ks is computed but never applied to ETc (Eq. 81)",
+      "passed": true,
+      "evidence": "Ks never used; Eq. 81"
+    },
+    {
+      "text": "Flags Ks computed from end-of-day instead of start-of-day depletion",
+      "passed": true,
+      "evidence": "should use start-of-day Dr (Example 37)"
+    },
+    {
+      "text": "Flags missing 0..TAW clamp / deep percolation (Eq. 86/88)",
+      "passed": true,
+      "evidence": "no 0..TAW clamp (Eq. 86), no DP (Eq. 88)"
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  }
+}

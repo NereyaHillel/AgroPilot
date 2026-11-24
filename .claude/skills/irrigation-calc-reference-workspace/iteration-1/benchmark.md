@@ -1,13 +1,13 @@
-# Skill Benchmark: irrigation-calc-reference
+# Skill Benchmark: fao56-irrigation
 
 **Model**: <model-name>
-**Date**: 2026-11-15T09:07:42Z
-**Evals**: 1, 2, 3 (3 runs each per configuration)
+**Date**: 2026-11-24T10:01:40Z
+**Evals**: 1, 2, 3, 4 (3 runs each per configuration)
 
 ## Summary
 
 | Metric | With Skill | Without Skill | Delta |
 |--------|------------|---------------|-------|
-| Pass Rate | 100% ± 0% | 78% ± 25% | +0.22 |
-| Time | 19.9s ± 3.6s | 20.0s ± 4.1s | -0.0s |
-| Tokens | 39583 ± 2899 | 33878 ± 1614 | +5706 |
+| Pass Rate | 100% ± 0% | 100% ± 0% | +0.00 |
+| Time | 46.2s ± 6.0s | 52.2s ± 15.8s | -6.1s |
+| Tokens | 47574 ± 3038 | 42732 ± 5846 | +4842 |

@@ -69,6 +69,20 @@ def test_rain_reduces_need_and_caps_the_bucket(client, world):
     assert [day["need_mm"] for day in days] == [0, 0]
 
 
+def test_drizzle_below_a_fifth_of_et0_is_ignored(client, world):
+    # ET0 5.0, so rain under 1.0 mm is ignored: full bucket 58.1 - ETc 5.75 = 52.35.
+    world.forecast["days"] = forecast_days(1, rain=0.9)
+    assert get_plan(client, days=1).json()["days"][0]["bucket_end_mm"] == 52.35
+
+
+def test_rain_of_a_fifth_of_et0_counts(client, world):
+    # 1.0 mm is exactly 0.2 x ET0, so it counts: start from dry (29.05) + 1.0 - 5.75 = 24.3,
+    # below the trigger, so the refill is 33.8 mm, capped at 24 mm (24 h).
+    world.forecast["days"] = forecast_days(1, rain=1.0)
+    day1 = get_plan(client, days=1, soil_state="dry").json()["days"][0]
+    assert (day1["need_mm"], day1["bucket_end_mm"]) == (24.0, 48.3)
+
+
 def test_run_time_follows_emitter_flow_and_spacing(client, world):
     # 1.0 L/h on 1.5 x 0.4 m = 1.6667 mm/h; 34.5 mm takes 34.5 / 1.6667 x 60 = 1242 min.
     world.emitter["flow_lph"] = 1.0
@@ -128,30 +142,32 @@ def test_unknown_soil_state_is_422(client, value):
     assert "soil_state" in body["detail"]
 
 
-def test_dry_start_irrigates_on_day_1(client):
+def test_dry_start_is_at_the_trigger_and_irrigates_on_day_1(client):
+    # dry = 0.5 x TAW = 29.05; minus ETc 5.75 = 23.3 < trigger: 34.8 mm missing, capped at 24 mm (24 h)
     day1 = get_plan(client, soil_state="dry").json()["days"][0]
     assert (day1["need_mm"], day1["litres"], day1["run_minutes"], day1["bucket_end_mm"]) == (
-        24.0, 36000.0, 1440.0, 24.0,  # capped at 24 h; the refill continues on the next days
+        24.0, 36000.0, 1440.0, 47.3,  # the refill continues on the next day
     )
 
 
-def test_half_start_irrigates_on_day_1(client):
-    # level 29.05 - ETc 5.75 = 23.3 < trigger 29.05: 34.8 mm missing, capped at 24 mm (24 h)
+def test_half_start_is_three_quarters_full_and_does_not_irrigate(client):
+    # half = 0.75 x TAW = 43.575; minus ETc 5.75 = 37.825, above the trigger 29.05
     day1 = get_plan(client, soil_state="half").json()["days"][0]
-    assert (day1["need_mm"], day1["litres"], day1["run_minutes"]) == (24.0, 36000.0, 1440.0)
+    assert (day1["need_mm"], day1["run_minutes"], day1["bucket_end_mm"]) == (0, 0, 37.82)
 
 
 def test_dry_refill_is_split_across_days_at_24_hours_a_day(client):
-    # ETc 5.75. Day 1: 0 -> 24 mm. Day 2: 18.25 -> 42.25. Day 3: 36.5 -> 58.1 (21.6 mm). Day 4: no irrigation.
+    # ETc 5.75. Day 1: 23.3 -> 24 mm -> 47.3. Day 2: 41.55 -> 16.55 mm -> 58.1. Days 3-4: no irrigation.
     days = get_plan(client, days=4, soil_state="dry").json()["days"]
-    assert [day["need_mm"] for day in days] == [24.0, 24.0, 21.6, 0]
-    assert [day["run_minutes"] for day in days] == [1440.0, 1440.0, 1296.0, 0]
-    assert [day["bucket_end_mm"] for day in days] == [24.0, 42.25, 58.1, 52.35]
+    assert [day["need_mm"] for day in days] == [24.0, 16.55, 0, 0]
+    assert [day["run_minutes"] for day in days] == [1440.0, 993.0, 0, 0]
+    assert [day["bucket_end_mm"] for day in days] == [47.3, 58.1, 52.35, 46.6]
     assert all(day["run_minutes"] <= 24 * 60 for day in days)
 
 
 def test_past_season_plot_holds_kc_end_and_still_splits(client, world):
+    # Kc end 0.8 x ET0 5 = ETc 4. Day 1: 29.05 - 4 = 25.05 -> 33.05 missing, 24 mm -> 49.05. Day 2: 45.05 -> 13.05 mm.
     world.plot["planting_date"] = "2025-01-01"
     days = get_plan(client, days=2, soil_state="dry").json()["days"]
     assert [day["kc"] for day in days] == [0.8, 0.8]
-    assert [day["need_mm"] for day in days] == [24.0, 24.0]
+    assert [day["need_mm"] for day in days] == [24.0, 13.05]

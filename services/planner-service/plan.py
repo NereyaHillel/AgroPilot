@@ -3,8 +3,8 @@
 from crops import CROP_PLANS
 from errors import ValidationProblem
 from irrigation import (
-    MAX_RUN_HOURS, START_FRACTION, TRIGGER_FRACTION, application_rate_mm_h, bucket_day, etc, kc_for_day, litres,
-    run_minutes,
+    MAX_RUN_HOURS, START_FRACTION, TRIGGER_FRACTION, application_rate_mm_h, bucket_day, effective_rain, etc, kc_for_day,
+    litres, run_minutes,
 )
 from schemas import Forecast, RegistryEmitter, RegistryPlot, RegistrySoil, SoilState
 
@@ -27,7 +27,8 @@ def build_plan(
         # Season day 1 is the planting date. Outside the season the curve holds its end values.
         season_day = min(max((day.date - plot.planting_date).days + 1, 1), season_length)
         kc = kc_for_day(season_day, stages, crop.kc_ini, crop.kc_mid, crop.kc_end)
-        result = bucket_day(level, taw, day.rain_mm, etc(kc, day.et0_mm), max_apply_mm, refilling)
+        rain = effective_rain(day.rain_mm, day.et0_mm)
+        result = bucket_day(level, taw, rain, etc(kc, day.et0_mm), max_apply_mm, refilling)
         level, refilling = result.level_end, result.refilling
         plan.append(
             {

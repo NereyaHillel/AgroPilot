@@ -151,8 +151,9 @@ def irrigation_decision(dr_end: float, raw: float) -> float:
 
 
 TRIGGER_FRACTION = 0.5  # irrigate when the level would fall below this share of the bucket
-# Share of the bucket that is full at the start of day 1, as chosen by the farmer.
-START_FRACTION = {"dry": 0.0, "half": 0.5, "wet": 1.0}
+# Share of the bucket that is full at the start of day 1, as chosen by the farmer. "dry" means at the
+# trigger (not empty): an empty root zone is wilting point, which FAO-56 scheduling never reaches.
+START_FRACTION = {"dry": TRIGGER_FRACTION, "half": 0.75, "wet": 1.0}
 
 
 MAX_RUN_HOURS = 24  # a plot cannot irrigate longer than a day, so a big refill is split over days
@@ -187,6 +188,11 @@ def bucket_day(
     if missing <= max_apply_mm:
         return BucketDay(need_mm=missing, level_end=taw, refilling=False)
     return BucketDay(need_mm=max_apply_mm, level_end=level_pre + max_apply_mm, refilling=True)
+
+
+def effective_rain(rain: float, et0: float) -> float:
+    """Rain below 0.2 x ET0 is ignored (FAO-56 Ch. 8: "usually ignored"); otherwise it counts in full."""
+    return 0.0 if rain < 0.2 * et0 else rain
 
 
 def application_rate_mm_h(flow_lph: float, row_spacing_m: float, emitter_spacing_m: float) -> float:

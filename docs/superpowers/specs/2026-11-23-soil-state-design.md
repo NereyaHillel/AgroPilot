@@ -27,10 +27,10 @@ The planner assumes the soil bucket is full at the start of day 1. That is often
 ## Design
 **Planner**
 - `GET /v1/plots/{id}/plan` takes a **required** `soil_state` of `dry`, `half` or `wet`. A missing or unknown value returns a 422 problem response (the planner's existing error shape).
-- Starting level: dry = 0, half = 0.5 x TAW, wet = TAW.
-- `bucket_day` floors `level_pre` at 0, so a dry start refills to full on day 1 without adding that day's ET on top. This is my call and is flagged for the builder.
+- Starting level: dry = 0.5 x TAW (at the irrigation trigger), half = 0.75 x TAW, wet = TAW. Revised 2026-11-24: dry was 0, but an empty root zone is wilting point (Ks = 0), which FAO-56 scheduling never reaches, and it produced 58 h refills on the sand plot.
+- `bucket_day` floors `level_pre` at 0, so an empty bucket refills to full without adding that day's ET on top. (Originally written for dry = 0; it still guards an empty bucket.)
 - The existing planner tests assumed a full start and no parameter. They are updated to pass `soil_state=wet`.
-- New tests: each state, the missing and invalid values, and the dry-start floor. Add Case 6 to the irrigation reference: tomato, sand 83 mm/m, TAW 58.1, dry start, day 1 need = 58.1 mm.
+- New tests: each state, the missing and invalid values, and the dry-start floor. Dry-start example (revised 2026-11-24): tomato, sand 83 mm/m, TAW 58.1, dry = 29.05 mm, ETc 5.75, so day 1 needs 34.8 mm, capped at 24 mm (24 h at 1 mm/h).
 
 **Frontend**
 - `getPlan(plotId, soilState)` sends the parameter.

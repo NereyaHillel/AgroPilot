@@ -1,0 +1,14 @@
+{
+ "dr1_zero": [
+  true,
+  "Day 1 end depletion 0 mm, root zone at field capacity"
+ ],
+ "small_rain": [
+  true,
+  "0.6 < 0.2 x ET0 = 0.8, 'usually ignored', Dr 4.6 (4.0 if counted)"
+ ],
+ "no_irrigation": [
+  true,
+  "No irrigation on either day"
+ ]
+}

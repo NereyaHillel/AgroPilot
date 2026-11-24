@@ -1,0 +1,45 @@
+{
+  "expectations": [
+    {
+      "text": "TAW = 105 mm",
+      "passed": true,
+      "evidence": "found 105"
+    },
+    {
+      "text": "p adjusted to 0.33",
+      "passed": true,
+      "evidence": "found 0.33"
+    },
+    {
+      "text": "RAW 34.65 mm",
+      "passed": true,
+      "evidence": "found 34.65"
+    },
+    {
+      "text": "Counts the 3 mm rain (above 0.2 x ET0 = 1.5 mm)",
+      "passed": true,
+      "evidence": "3 mm counted, above 0.2 x ET0 = 1.5 mm"
+    },
+    {
+      "text": "Ks consistent with a stated depletion convention (0.782 start-of-day, or 0.825 after morning rain) and names which",
+      "passed": true,
+      "evidence": "start-of-day Ks 0.7818; Annex 8 alternative 0.824 named"
+    },
+    {
+      "text": "End-of-day depletion about 52.28 mm (or 52.57 under the after-rain convention)",
+      "passed": true,
+      "evidence": "52.28 mm"
+    },
+    {
+      "text": "Net irrigation equals end-of-day depletion (refill to field capacity)",
+      "passed": true,
+      "evidence": "52.28 mm refill to FC"
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 0,
+    "total": 7,
+    "pass_rate": 1.0
+  }
+}
