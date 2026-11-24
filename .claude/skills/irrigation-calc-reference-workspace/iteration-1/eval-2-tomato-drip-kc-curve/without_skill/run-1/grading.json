@@ -1,0 +1,45 @@
+{
+  "expectations": [
+    {
+      "text": "Uses Table 11 Mediterranean stages 30/40/45/30",
+      "passed": true,
+      "evidence": "all patterns found"
+    },
+    {
+      "text": "Kc ini = 0.6 x 0.35 = 0.21 (Eq. 60)",
+      "passed": true,
+      "evidence": "found 0.21"
+    },
+    {
+      "text": "Climate-adjusted Kc mid about 1.21 (Eq. 62)",
+      "passed": true,
+      "evidence": "found 1.2117"
+    },
+    {
+      "text": "Climate-adjusted Kc end about 0.86 (Eq. 65)",
+      "passed": true,
+      "evidence": "found 0.8617"
+    },
+    {
+      "text": "Day 50 Kc about 0.711",
+      "passed": true,
+      "evidence": "found 0.71"
+    },
+    {
+      "text": "Day 140 Kc about 0.920",
+      "passed": true,
+      "evidence": "found 0.92"
+    },
+    {
+      "text": "Does not scale Kc mid or Kc end by the wetted fraction (only Kc ini)",
+      "passed": true,
+      "evidence": "'Only Kc ini is scaled. Kc mid and Kc end are not scaled by fw.'"
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 0,
+    "total": 7,
+    "pass_rate": 1.0
+  }
+}

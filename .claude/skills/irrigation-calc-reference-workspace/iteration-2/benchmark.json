@@ -4,18 +4,17 @@
     "skill_path": "<path/to/skill>",
     "executor_model": "<model-name>",
     "analyzer_model": "<model-name>",
-    "timestamp": "2026-11-15T09:18:04Z",
+    "timestamp": "2026-11-24T10:06:32Z",
     "evals_run": [
-      1,
-      2,
-      3,
-      4
+      5,
+      6,
+      7
     ],
     "runs_per_configuration": 3
   },
   "runs": [
     {
-      "eval_id": 1,
+      "eval_id": 5,
       "configuration": "with_skill",
       "run_number": 1,
       "result": {
@@ -23,52 +22,52 @@
         "passed": 7,
         "failed": 0,
         "total": 7,
-        "time_seconds": 18.8,
-        "tokens": 37684,
+        "time_seconds": 39.9,
+        "tokens": 42929,
         "tool_calls": 0,
         "errors": 0
       },
       "expectations": [
         {
-          "text": "States TAW = 41.5 mm (sand 83 mm/m x root depth 0.5 m) and an irrigation trigger of 20.75 mm (half of the bucket)",
+          "text": "TAW = 105 mm",
           "passed": true,
-          "evidence": "TAW 41.5, trigger 20.75"
+          "evidence": "found 105"
         },
         {
-          "text": "Day 1 Kc is about 0.857 (development stage of the 30/35/40/20 day pepper curve, Kc 0.6 to 1.05) and day 5 Kc is about 0.909",
+          "text": "p adjusted to 0.33",
           "passed": true,
-          "evidence": "Kc 0.857 ... 0.909"
+          "evidence": "found 0.33"
         },
         {
-          "text": "Days 1 to 4 have need_mm 0, litres 0 and run_minutes 0",
+          "text": "RAW 34.65 mm",
           "passed": true,
-          "evidence": "Need 0 on days 1-4"
+          "evidence": "found 34.65"
         },
         {
-          "text": "End-of-day bucket levels for days 1 to 4 are about 35.93, 29.84, 28.66 and 23.28 mm (within 0.5%)",
+          "text": "Counts the 3 mm rain (above 0.2 x ET0 = 1.5 mm)",
           "passed": true,
-          "evidence": "35.93, 29.84, 28.66, 23.28"
+          "evidence": "3 mm counted, above 0.2 x ET0 = 1.5 mm"
         },
         {
-          "text": "Day 5 need_mm is about 23.67 and the end-of-day level is 41.5",
+          "text": "Ks consistent with a stated depletion convention (0.782 start-of-day, or 0.825 after morning rain) and names which",
           "passed": true,
-          "evidence": "Day 5 need 23.67, level 41.50"
+          "evidence": "start-of-day Ks 0.7818; Annex 8 alternative 0.824 named"
         },
         {
-          "text": "Day 5 litres is about 9467 and run_minutes about 319.5 (rate 4.444 mm/h from 1.6 L/h on 1.2 x 0.3 m)",
+          "text": "End-of-day depletion about 52.28 mm (or 52.57 under the after-rain convention)",
           "passed": true,
-          "evidence": "9466.86 L, 319.51 min"
+          "evidence": "52.28 mm"
         },
         {
-          "text": "States that the bucket starts full at the beginning of the plan",
+          "text": "Net irrigation equals end-of-day depletion (refill to field capacity)",
           "passed": true,
-          "evidence": "Assumes bucket full at start"
+          "evidence": "52.28 mm refill to FC"
         }
       ],
       "notes": []
     },
     {
-      "eval_id": 2,
+      "eval_id": 6,
       "configuration": "with_skill",
       "run_number": 1,
       "result": {
@@ -76,284 +75,218 @@
         "passed": 5,
         "failed": 0,
         "total": 5,
-        "time_seconds": 18.1,
-        "tokens": 37217,
+        "time_seconds": 52.1,
+        "tokens": 49284,
         "tool_calls": 0,
         "errors": 0
       },
       "expectations": [
         {
-          "text": "States TAW = 140 mm (clay loam 200 mm/m x root depth 0.7 m)",
+          "text": "Kc ini = 0.6 x 0.4 = 0.24",
           "passed": true,
-          "evidence": "TAW 140"
+          "evidence": "found 0.24"
         },
         {
-          "text": "Uses Kc = 0.80 on all four days",
+          "text": "Flags that the initial stage is printed '25/30' and states which was used (or gives both)",
           "passed": true,
-          "evidence": "Kc 0.80 all days"
+          "evidence": "table with both 25 d and 30 d readings; recommends 30"
         },
         {
-          "text": "Explains that the planting date is past the end of the season (about 145 days) so Kc end is held",
+          "text": "Day 120 Kc 0.9375 (30-d initial) or 0.90 (25-d initial), consistent with the stated choice",
           "passed": true,
-          "evidence": "Season day 547, past 145-day season, holds Kc end"
+          "evidence": "0.90 (25 d) / 0.9375 (30 d)"
         },
         {
-          "text": "End-of-day bucket levels are about 134.4, 140.0, 134.4 and 128.8 mm, with the 60 mm rain capped at the bucket size",
+          "text": "Recognises the climate adjustment is zero at u2 2 / RHmin 45",
           "passed": true,
-          "evidence": "134.4, 140.0, 134.4, 128.8, rain capped"
+          "evidence": "Eq. 62/65 correction is zero"
         },
         {
-          "text": "need_mm, litres and run_minutes are 0 on all four days",
+          "text": "Does not scale Kc mid/end by fw",
           "passed": true,
-          "evidence": "All zero"
+          "evidence": "Kc mid/end not multiplied by fw"
         }
       ],
       "notes": []
     },
     {
-      "eval_id": 3,
+      "eval_id": 7,
       "configuration": "with_skill",
       "run_number": 1,
       "result": {
         "pass_rate": 1.0,
-        "passed": 4,
+        "passed": 5,
         "failed": 0,
-        "total": 4,
-        "time_seconds": 13.4,
-        "tokens": 36379,
-        "tool_calls": 0,
-        "errors": 0
-      },
-      "expectations": [
-        {
-          "text": "Root depth is 0.5 m and TAW = 100 mm",
-          "passed": true,
-          "evidence": "Zr 0.5 m, TAW 100"
-        },
-        {
-          "text": "Trigger level is 50 mm (half of the bucket)",
-          "passed": true,
-          "evidence": "Trigger 50 mm"
-        },
-        {
-          "text": "Stage lengths are 30/35/40/20 days",
-          "passed": true,
-          "evidence": "30/35/40/20"
-        },
-        {
-          "text": "Kc ini 0.6, Kc mid 1.05 and Kc end 0.90",
-          "passed": true,
-          "evidence": "0.6 / 1.05 / 0.90"
-        }
-      ],
-      "notes": []
-    },
-    {
-      "eval_id": 4,
-      "configuration": "with_skill",
-      "run_number": 1,
-      "result": {
-        "pass_rate": 1.0,
-        "passed": 4,
-        "failed": 0,
-        "total": 4,
-        "time_seconds": 11.7,
-        "tokens": 36231,
-        "tool_calls": 0,
-        "errors": 0
-      },
-      "expectations": [
-        {
-          "text": "Says the first irrigation is on day 6 (day 5 ends at exactly 35 mm, which does not trigger)",
-          "passed": true,
-          "evidence": "Day 6"
-        },
-        {
-          "text": "Says the irrigation applies 42 mm",
-          "passed": true,
-          "evidence": "42 mm"
-        },
-        {
-          "text": "Says the end-of-day level on that day is 70 mm",
-          "passed": true,
-          "evidence": "70 mm"
-        },
-        {
-          "text": "States that the bucket starts full on day 1",
-          "passed": true,
-          "evidence": "Bucket starts full"
-        }
-      ],
-      "notes": []
-    },
-    {
-      "eval_id": 1,
-      "configuration": "without_skill",
-      "run_number": 1,
-      "result": {
-        "pass_rate": 0.14285714285714285,
-        "passed": 1,
-        "failed": 6,
-        "total": 7,
-        "time_seconds": 25.2,
-        "tokens": 35306,
-        "tool_calls": 0,
-        "errors": 0
-      },
-      "expectations": [
-        {
-          "text": "States TAW = 41.5 mm (sand 83 mm/m x root depth 0.5 m) and an irrigation trigger of 20.75 mm (half of the bucket)",
-          "passed": false,
-          "evidence": "TAW 58.1 (root depth 0.7 m, p 0.30), RAW 17.4; not 41.5 / 20.75"
-        },
-        {
-          "text": "Day 1 Kc is about 0.857 (development stage of the 30/35/40/20 day pepper curve, Kc 0.6 to 1.05) and day 5 Kc is about 0.909",
-          "passed": false,
-          "evidence": "Uses 25-day initial stage, Kc 0.909 on day 1"
-        },
-        {
-          "text": "Days 1 to 4 have need_mm 0, litres 0 and run_minutes 0",
-          "passed": false,
-          "evidence": "Irrigates on day 4 (06-13)"
-        },
-        {
-          "text": "End-of-day bucket levels for days 1 to 4 are about 35.93, 29.84, 28.66 and 23.28 mm (within 0.5%)",
-          "passed": false,
-          "evidence": "Levels 52.2, 45.7, 44.2 ..."
-        },
-        {
-          "text": "Day 5 need_mm is about 23.67 and the end-of-day level is 41.5",
-          "passed": false,
-          "evidence": "Day 5 need 0 (irrigated day 4: 19.58 mm)"
-        },
-        {
-          "text": "Day 5 litres is about 9467 and run_minutes about 319.5 (rate 4.444 mm/h from 1.6 L/h on 1.2 x 0.3 m)",
-          "passed": false,
-          "evidence": "8702 L, 294 min on day 4"
-        },
-        {
-          "text": "States that the bucket starts full at the beginning of the plan",
-          "passed": true,
-          "evidence": "Assumes bucket full"
-        }
-      ],
-      "notes": []
-    },
-    {
-      "eval_id": 2,
-      "configuration": "without_skill",
-      "run_number": 1,
-      "result": {
-        "pass_rate": 0.0,
-        "passed": 0,
-        "failed": 5,
         "total": 5,
-        "time_seconds": 26.1,
-        "tokens": 35357,
+        "time_seconds": 54.2,
+        "tokens": 43679,
         "tool_calls": 0,
         "errors": 0
       },
       "expectations": [
         {
-          "text": "States TAW = 140 mm (clay loam 200 mm/m x root depth 0.7 m)",
-          "passed": false,
-          "evidence": "Used root depth 1.0 m, TAW 200"
-        },
-        {
-          "text": "Uses Kc = 0.80 on all four days",
-          "passed": false,
-          "evidence": "Kc 1.15 (assumed peak demand), not 0.80"
-        },
-        {
-          "text": "Explains that the planting date is past the end of the season (about 145 days) so Kc end is held",
-          "passed": false,
-          "evidence": "Recognises past season but picks Kc mid instead of holding Kc end"
-        },
-        {
-          "text": "End-of-day bucket levels are about 134.4, 140.0, 134.4 and 128.8 mm, with the 60 mm rain capped at the bucket size",
-          "passed": false,
-          "evidence": "All levels 200 mm"
-        },
-        {
-          "text": "need_mm, litres and run_minutes are 0 on all four days",
-          "passed": false,
-          "evidence": "Irrigates 8.05 mm on three days"
-        }
-      ],
-      "notes": []
-    },
-    {
-      "eval_id": 3,
-      "configuration": "without_skill",
-      "run_number": 1,
-      "result": {
-        "pass_rate": 0.25,
-        "passed": 1,
-        "failed": 3,
-        "total": 4,
-        "time_seconds": 13.6,
-        "tokens": 33508,
-        "tool_calls": 0,
-        "errors": 0
-      },
-      "expectations": [
-        {
-          "text": "Root depth is 0.5 m and TAW = 100 mm",
-          "passed": false,
-          "evidence": "Root depth 0.7 m (0.5 only as an option); TAW 140"
-        },
-        {
-          "text": "Trigger level is 50 mm (half of the bucket)",
-          "passed": false,
-          "evidence": "Trigger 30 mm (p = 0.30)"
-        },
-        {
-          "text": "Stage lengths are 30/35/40/20 days",
-          "passed": false,
-          "evidence": "25/35/40/20, 120 days"
-        },
-        {
-          "text": "Kc ini 0.6, Kc mid 1.05 and Kc end 0.90",
+          "text": "Flags that fw should not scale Kc mid (only Kc ini, Eq. 60)",
           "passed": true,
-          "evidence": "0.60 / 1.05 / 0.90"
+          "evidence": "only Kc ini scaled, Eq. 60"
+        },
+        {
+          "text": "Flags missing p adjustment for ETc (and 0.1-0.8 clamp)",
+          "passed": true,
+          "evidence": "p = 0.30 + 0.04(5-ETc), clamp 0.1..0.8"
+        },
+        {
+          "text": "Flags that Ks is computed but never applied to ETc (Eq. 81)",
+          "passed": true,
+          "evidence": "Ks never used; Eq. 81"
+        },
+        {
+          "text": "Flags Ks computed from end-of-day instead of start-of-day depletion",
+          "passed": true,
+          "evidence": "should use start-of-day Dr (Example 37)"
+        },
+        {
+          "text": "Flags missing 0..TAW clamp / deep percolation (Eq. 86/88)",
+          "passed": true,
+          "evidence": "no 0..TAW clamp (Eq. 86), no DP (Eq. 88)"
         }
       ],
       "notes": []
     },
     {
-      "eval_id": 4,
+      "eval_id": 5,
       "configuration": "without_skill",
       "run_number": 1,
       "result": {
         "pass_rate": 1.0,
-        "passed": 4,
+        "passed": 7,
         "failed": 0,
-        "total": 4,
-        "time_seconds": 12.1,
-        "tokens": 33390,
+        "total": 7,
+        "time_seconds": 35.4,
+        "tokens": 37060,
         "tool_calls": 0,
         "errors": 0
       },
       "expectations": [
         {
-          "text": "Says the first irrigation is on day 6 (day 5 ends at exactly 35 mm, which does not trigger)",
+          "text": "TAW = 105 mm",
           "passed": true,
-          "evidence": "Day 6"
+          "evidence": "found 105"
         },
         {
-          "text": "Says the irrigation applies 42 mm",
+          "text": "p adjusted to 0.33",
           "passed": true,
-          "evidence": "42 mm"
+          "evidence": "found 0.33"
         },
         {
-          "text": "Says the end-of-day level on that day is 70 mm",
+          "text": "RAW 34.65 mm",
           "passed": true,
-          "evidence": "70 mm"
+          "evidence": "found 34.65"
         },
         {
-          "text": "States that the bucket starts full on day 1",
+          "text": "Counts the 3 mm rain (above 0.2 x ET0 = 1.5 mm)",
           "passed": true,
-          "evidence": "Assumes starts full"
+          "evidence": "50 - 3 + 5.28; rain counted (no 0.2 x ET0 rule cited)"
+        },
+        {
+          "text": "Ks consistent with a stated depletion convention (0.782 start-of-day, or 0.825 after morning rain) and names which",
+          "passed": true,
+          "evidence": "'Ks uses start-of-day depletion'"
+        },
+        {
+          "text": "End-of-day depletion about 52.28 mm (or 52.57 under the after-rain convention)",
+          "passed": true,
+          "evidence": "52.28 mm"
+        },
+        {
+          "text": "Net irrigation equals end-of-day depletion (refill to field capacity)",
+          "passed": true,
+          "evidence": "~52.3 mm refill to FC"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 6,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8,
+        "passed": 4,
+        "failed": 1,
+        "total": 5,
+        "time_seconds": 58.2,
+        "tokens": 40524,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Kc ini = 0.6 x 0.4 = 0.24",
+          "passed": false,
+          "evidence": "no number within 0.001 of 0.24"
+        },
+        {
+          "text": "Flags that the initial stage is printed '25/30' and states which was used (or gives both)",
+          "passed": true,
+          "evidence": "Reading A (30) / Reading B (25)"
+        },
+        {
+          "text": "Day 120 Kc 0.9375 (30-d initial) or 0.90 (25-d initial), consistent with the stated choice",
+          "passed": true,
+          "evidence": "0.9375 / 0.90"
+        },
+        {
+          "text": "Recognises the climate adjustment is zero at u2 2 / RHmin 45",
+          "passed": true,
+          "evidence": "adjustment is zero"
+        },
+        {
+          "text": "Does not scale Kc mid/end by fw",
+          "passed": true,
+          "evidence": "fw doesn't change Kc mid/end"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 7,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 58.4,
+        "tokens": 41785,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Flags that fw should not scale Kc mid (only Kc ini, Eq. 60)",
+          "passed": true,
+          "evidence": "fw only via Kc ini (Eq. 60) or Ke"
+        },
+        {
+          "text": "Flags missing p adjustment for ETc (and 0.1-0.8 clamp)",
+          "passed": true,
+          "evidence": "p not adjusted; 0.1-0.8"
+        },
+        {
+          "text": "Flags that Ks is computed but never applied to ETc (Eq. 81)",
+          "passed": true,
+          "evidence": "ks computed but never used (Eq. 80/81)"
+        },
+        {
+          "text": "Flags Ks computed from end-of-day instead of start-of-day depletion",
+          "passed": true,
+          "evidence": "end-of-day instead of start-of-day"
+        },
+        {
+          "text": "Flags missing 0..TAW clamp / deep percolation (Eq. 86/88)",
+          "passed": true,
+          "evidence": "not kept between 0 and TAW, drainage never counted"
         }
       ],
       "notes": []
@@ -368,43 +301,48 @@
         "max": 1.0
       },
       "time_seconds": {
-        "mean": 15.5,
-        "stddev": 3.4881,
-        "min": 11.7,
-        "max": 18.8
+        "mean": 48.7333,
+        "stddev": 7.7216,
+        "min": 39.9,
+        "max": 54.2
       },
       "tokens": {
-        "mean": 36877.75,
-        "stddev": 690.9334,
-        "min": 36231,
-        "max": 37684
+        "mean": 45297.3333,
+        "stddev": 3472.8603,
+        "min": 42929,
+        "max": 49284
       }
     },
     "without_skill": {
       "pass_rate": {
-        "mean": 0.3482,
-        "stddev": 0.4464,
-        "min": 0.0,
+        "mean": 0.9333,
+        "stddev": 0.1155,
+        "min": 0.8,
         "max": 1.0
       },
       "time_seconds": {
-        "mean": 19.25,
-        "stddev": 7.4245,
-        "min": 12.1,
-        "max": 26.1
+        "mean": 50.6667,
+        "stddev": 13.2217,
+        "min": 35.4,
+        "max": 58.4
       },
       "tokens": {
-        "mean": 34390.25,
-        "stddev": 1088.1282,
-        "min": 33390,
-        "max": 35357
+        "mean": 39789.6667,
+        "stddev": 2446.5977,
+        "min": 37060,
+        "max": 41785
       }
     },
     "delta": {
-      "pass_rate": "+0.65",
-      "time_seconds": "-3.8",
-      "tokens": "+2488"
+      "pass_rate": "+0.07",
+      "time_seconds": "-1.9",
+      "tokens": "+5508"
     }
   },
-  "notes": []
+  "notes": [
+    "Iteration 2 uses 3 new variation evals; evals 1-3 are now worked cases inside the skill, so re-running them would only test copying.",
+    "The one discriminating result is eval 6: without the skill, Kc ini on drip stayed at 0.60. The run did not apply Eq. 60 (fw x Table 12) and called the drip reduction optional. This is the same mistake the iteration-1 baseline made in eval 2 ('a choice, not a fixed rule'). With the skill: 0.24.",
+    "Evals 5 and 7 pass in both configurations; the baselines read irrigation.py and fao56.md in the repo themselves.",
+    "With-skill runs were faster on average and used similar tokens."
+  ]
 }

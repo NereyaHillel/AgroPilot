@@ -1,0 +1,22 @@
+{
+ "fw": [
+  true,
+  "only Kc ini scaled, Eq. 60"
+ ],
+ "p": [
+  true,
+  "p = 0.30 + 0.04(5-ETc), clamp 0.1..0.8"
+ ],
+ "ks_unused": [
+  true,
+  "Ks never used; Eq. 81"
+ ],
+ "ks_timing": [
+  true,
+  "should use start-of-day Dr (Example 37)"
+ ],
+ "clamp_dp": [
+  true,
+  "no 0..TAW clamp (Eq. 86), no DP (Eq. 88)"
+ ]
+}

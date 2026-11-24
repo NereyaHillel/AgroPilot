@@ -1,0 +1,13 @@
+{
+  "eval_id": 4,
+  "eval_name": "annex8-as-test-oracle",
+  "prompt": "I'm thinking of using the FAO-56 Annex 8 spreadsheet example as a day-by-day test oracle for our planner-service (single Kc, tomato and pepper on drip). Which parts of it can I actually compare against, and what should I watch out for? Short answer is fine.",
+  "assertions": [
+    "States Annex 8 uses the dual Kc (Kcb + Ke) procedure, not single Kc",
+    "Notes the example crop is dry beans, not tomato/pepper",
+    "Advises against comparing daily Kc/ETc/depletion numbers directly; use structure/logic instead",
+    "Identifies the comparable logic: trigger at RAW/allowable depletion and refill to field capacity",
+    "Names at least one concrete source pitfall (Box 8.1 typos/wrong column, Kcb end 0.23 vs 0.25, or numbers only shown for the first days / rest only as a graph)",
+    "Does not invent specific Annex 8 schedule totals (season irrigation total, dates) presented as source facts"
+  ]
+}

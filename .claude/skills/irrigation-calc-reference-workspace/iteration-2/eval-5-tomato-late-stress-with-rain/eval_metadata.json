@@ -1,0 +1,14 @@
+{
+  "eval_id": 5,
+  "eval_name": "tomato-late-stress-with-rain",
+  "prompt": "Tomato late season, today's Kc is 0.90. Silt loam, FC 0.30 and WP 0.15, roots at 0.7 m. Root zone started today 50 mm depleted; we got 3 mm of rain this morning (no runoff) and ET0 is 7.5 mm. What's actual crop water use today, end-of-day depletion, and tomorrow's net irrigation? Show steps.",
+  "assertions": [
+    "TAW = 105 mm",
+    "p adjusted to 0.33",
+    "RAW 34.65 mm",
+    "Counts the 3 mm rain (above 0.2 x ET0 = 1.5 mm)",
+    "Ks consistent with a stated depletion convention (0.782 start-of-day, or 0.825 after morning rain) and names which",
+    "End-of-day depletion about 52.28 mm (or 52.57 under the after-rain convention)",
+    "Net irrigation equals end-of-day depletion (refill to field capacity)"
+  ]
+}

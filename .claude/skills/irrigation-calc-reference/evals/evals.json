@@ -3,54 +3,331 @@
   "evals": [
     {
       "id": 1,
-      "name": "pepper-five-day-plan",
-      "prompt": "The planner-service plan for a plot is being reviewed by hand. Plot: bell pepper planted 2026-04-22, sand soil (registry says 83 mm of available water per metre), 400 m2, rows 1.2 m apart, emitters every 0.3 m, DripNet PC emitters of 1.6 L/h. The weather forecast for the next five days starting 2026-06-10 is fresh: ET0 6.5, 7.0, 7.0, 6.0, 6.0 mm and rain 0, 0, 5, 0, 0 mm. Produce the 5-day plan the planner should return: for each day Kc, need_mm, litres, run_minutes and the bucket level at the end of the day. State any assumptions. Do not ask me questions.",
-      "expected_output": "Kc 0.857..0.909; no irrigation days 1-4 (levels 35.93, 29.84, 28.66, 23.28); day 5 need 23.67 mm, 9467 L, 319.5 min, level 41.5",
+      "name": "pepper-stress-day",
+      "prompt": "Bell pepper under drip, mid-season (Kc 1.05), loam with field capacity 0.25 and wilting point 0.12 m3/m3, root depth 0.5 m. At the start of today the root zone was 30 mm depleted. ET0 today is 6.5 mm, no rain, no irrigation. Using FAO-56, how much water does the crop actually use today, what's the depletion at the end of the day, and how much net irrigation should go on tomorrow morning? Show the steps.",
+      "expected_output": "TAW 65 mm; ETc 6.825; p = 0.30 + 0.04(5-6.825) = 0.227; RAW 14.755; Dr 30 > RAW so Ks = 35/(0.773*65) = 0.697; ETc adj 4.75 mm; Dr end 34.75 mm; net irrigation about 34.75 mm (refill to FC).",
+      "files": [],
       "assertions": [
-        "States TAW = 41.5 mm (sand 83 mm/m x root depth 0.5 m) and an irrigation trigger of 20.75 mm (half of the bucket)",
-        "Day 1 Kc is about 0.857 (development stage of the 30/35/40/20 day pepper curve, Kc 0.6 to 1.05) and day 5 Kc is about 0.909",
-        "Days 1 to 4 have need_mm 0, litres 0 and run_minutes 0",
-        "End-of-day bucket levels for days 1 to 4 are about 35.93, 29.84, 28.66 and 23.28 mm (within 0.5%)",
-        "Day 5 need_mm is about 23.67 and the end-of-day level is 41.5",
-        "Day 5 litres is about 9467 and run_minutes about 319.5 (rate 4.444 mm/h from 1.6 L/h on 1.2 x 0.3 m)",
-        "States that the bucket starts full at the beginning of the plan"
+        {
+          "id": "taw",
+          "text": "TAW = 65 mm (Eq. 82)",
+          "check": "number",
+          "value": 65,
+          "tol": 0.05
+        },
+        {
+          "id": "p_adj",
+          "text": "p adjusted for ETc to about 0.227 (not left at 0.30)",
+          "check": "number",
+          "value": 0.227,
+          "tol": 0.002
+        },
+        {
+          "id": "raw",
+          "text": "RAW about 14.75 mm",
+          "check": "number",
+          "value": 14.755,
+          "tol": 0.06
+        },
+        {
+          "id": "ks",
+          "text": "Ks about 0.697 from Eq. 84",
+          "check": "number",
+          "value": 0.6966,
+          "tol": 0.003
+        },
+        {
+          "id": "etc_adj",
+          "text": "Actual (stressed) crop water use about 4.75 mm",
+          "check": "number",
+          "value": 4.754,
+          "tol": 0.02
+        },
+        {
+          "id": "dr_end",
+          "text": "End-of-day depletion about 34.75 mm",
+          "check": "number",
+          "value": 34.754,
+          "tol": 0.06
+        },
+        {
+          "id": "cites_eqs",
+          "text": "Cites Eq. 84 (Ks) and Eq. 85 (water balance)",
+          "check": "regex_all",
+          "patterns": [
+            "Eq(uation)?\\.?\\s*84",
+            "Eq(uation)?\\.?\\s*85"
+          ]
+        },
+        {
+          "id": "irrigation",
+          "text": "Recommends net irrigation equal to the end-of-day depletion (~34.75 mm) to refill to field capacity",
+          "check": "judge"
+        }
       ]
     },
     {
       "id": 2,
-      "name": "tomato-past-season-rain",
-      "prompt": "Same planner, another plot. Tomato planted 2025-01-01 in clay loam (registry: 200 mm of available water per metre), 1000 m2, rows 1.5 m apart, emitters every 0.4 m at 1.0 L/h. The fresh forecast for 4 days starting 2026-07-01 has ET0 7.0 mm every day and rain 0, 60, 0, 0 mm. Give Kc, need_mm, litres, run_minutes and the end-of-day bucket level for each day, and explain how you chose Kc given the planting date. Do not ask me questions.",
-      "expected_output": "Kc 0.80 all days (planting date is past the 145-day season, Kc end held); TAW 140; levels 134.4, 140.0, 134.4, 128.8; no irrigation",
+      "name": "tomato-drip-kc-curve",
+      "prompt": "Tomato on drip (wetted fraction 0.35), Mediterranean April planting, use the FAO-56 Table 11 Mediterranean stage lengths and Kc end 0.80. Mid and late season both average u2 = 3 m/s, RHmin = 30%, plant height 0.6 m. Give me the Kc values the planner should use on season days 20, 50 and 140, with the equations.",
+      "expected_output": "Stages 30/40/45/30. Kc ini 0.6 x 0.35 = 0.21 (Eq. 60). Kc mid 1.15 + 0.10*(0.2)^0.3 = 1.2117 (Eq. 62). Kc end 0.80 + same = 0.8617 (Eq. 65, >= 0.45). Day 20: 0.21; day 50: 0.711; day 140: 0.920. Kc mid/end not scaled by fw.",
+      "files": [],
       "assertions": [
-        "States TAW = 140 mm (clay loam 200 mm/m x root depth 0.7 m)",
-        "Uses Kc = 0.80 on all four days",
-        "Explains that the planting date is past the end of the season (about 145 days) so Kc end is held",
-        "End-of-day bucket levels are about 134.4, 140.0, 134.4 and 128.8 mm, with the 60 mm rain capped at the bucket size",
-        "need_mm, litres and run_minutes are 0 on all four days"
+        {
+          "id": "stages",
+          "text": "Uses Table 11 Mediterranean stages 30/40/45/30",
+          "check": "regex_all",
+          "patterns": [
+            "30\\D{1,12}40\\D{1,12}45\\D{1,12}30"
+          ]
+        },
+        {
+          "id": "kc_ini",
+          "text": "Kc ini = 0.6 x 0.35 = 0.21 (Eq. 60)",
+          "check": "number",
+          "value": 0.21,
+          "tol": 0.001
+        },
+        {
+          "id": "kc_mid",
+          "text": "Climate-adjusted Kc mid about 1.21 (Eq. 62)",
+          "check": "number",
+          "value": 1.2117,
+          "tol": 0.003
+        },
+        {
+          "id": "kc_end",
+          "text": "Climate-adjusted Kc end about 0.86 (Eq. 65)",
+          "check": "number",
+          "value": 0.8617,
+          "tol": 0.003
+        },
+        {
+          "id": "day50",
+          "text": "Day 50 Kc about 0.711",
+          "check": "number",
+          "value": 0.7109,
+          "tol": 0.004
+        },
+        {
+          "id": "day140",
+          "text": "Day 140 Kc about 0.920",
+          "check": "number",
+          "value": 0.92,
+          "tol": 0.004
+        },
+        {
+          "id": "no_fw_mid",
+          "text": "Does not scale Kc mid or Kc end by the wetted fraction (only Kc ini)",
+          "check": "judge"
+        }
       ]
     },
     {
       "id": 3,
-      "name": "pepper-parameters",
-      "prompt": "I'm adding a new crop test to planner-service. For bell pepper in clay loam soil (registry: 200 mm of available water per metre), what bucket size (TAW), trigger level, root depth, stage lengths and Kc ini / Kc mid / Kc end does the planner use? Do not ask me questions.",
-      "expected_output": "TAW 100 mm, trigger 50 mm, root depth 0.5 m, stages 30/35/40/20, Kc 0.6/1.05/0.90",
+      "name": "tomato-rain-deep-percolation",
+      "prompt": "Tomato, full cover (Kc 1.15), sandy loam with FC 0.23 and WP 0.10, root zone 0.7 m. Start of day 1 depletion is 12 mm. Day 1: ET0 4 mm, 25 mm of rain, assume no runoff. Day 2: ET0 4 mm, 0.6 mm of drizzle. Run the FAO-56 root-zone water balance for both days: depletion at end of each day, deep percolation, and whether either day calls for irrigation.",
+      "expected_output": "TAW 91 mm; ETc 4.6; p 0.416, RAW 37.86; Ks 1. Day 1: Dr clamped to 0, DP = 25 - 4.6 - 12 = 8.4 mm. Day 2: 0.6 mm < 0.2 x ET0 = 0.8 so usually ignored, Dr 4.6 mm (4.0 if counted). No irrigation either day.",
+      "files": [],
       "assertions": [
-        "Root depth is 0.5 m and TAW = 100 mm",
-        "Trigger level is 50 mm (half of the bucket)",
-        "Stage lengths are 30/35/40/20 days",
-        "Kc ini 0.6, Kc mid 1.05 and Kc end 0.90"
+        {
+          "id": "taw",
+          "text": "TAW = 91 mm",
+          "check": "number",
+          "value": 91,
+          "tol": 0.05
+        },
+        {
+          "id": "raw",
+          "text": "RAW about 37.86 mm with p adjusted to 0.416",
+          "check": "number",
+          "value": 37.856,
+          "tol": 0.06
+        },
+        {
+          "id": "dp",
+          "text": "Day 1 deep percolation 8.4 mm (Eq. 88)",
+          "check": "number",
+          "value": 8.4,
+          "tol": 0.02
+        },
+        {
+          "id": "dr1_zero",
+          "text": "Day 1 end depletion is 0 (clamped, Eq. 86)",
+          "check": "judge"
+        },
+        {
+          "id": "small_rain",
+          "text": "Flags that 0.6 mm is below 0.2 x ET0 and is usually ignored (Dr day 2 = 4.6 mm)",
+          "check": "judge"
+        },
+        {
+          "id": "no_irrigation",
+          "text": "Concludes no irrigation is needed on either day",
+          "check": "judge"
+        }
       ]
     },
     {
       "id": 4,
-      "name": "bucket-example-first-irrigation",
-      "prompt": "In the planner's bucket model, a 70 mm bucket loses 7 mm every day with no rain. Which day does the planner first irrigate, how many mm does that irrigation apply, and what is the bucket level at the end of that day? Do not ask me questions.",
-      "expected_output": "Day 6 (level would drop to 28, below the 35 trigger); applies 42 mm; ends at 70 mm",
+      "name": "annex8-as-test-oracle",
+      "prompt": "I'm thinking of using the FAO-56 Annex 8 spreadsheet example as a day-by-day test oracle for our planner-service (single Kc, tomato and pepper on drip). Which parts of it can I actually compare against, and what should I watch out for? Short answer is fine.",
+      "expected_output": "Annex 8 is a dual-Kc (Kcb + Ke) dry-bean example, so its daily Kc/ETc/depletion won't match single-Kc; use it for structure (trigger, refill to FC, Zr growth Eq. 8-1, step order). Ks is Eq. 84; Box 8.1 typos / wrong column; schedule only shown 15-27 May in numbers, rest only a graph.",
+      "files": [],
       "assertions": [
-        "Says the first irrigation is on day 6 (day 5 ends at exactly 35 mm, which does not trigger)",
-        "Says the irrigation applies 42 mm",
-        "Says the end-of-day level on that day is 70 mm",
-        "States that the bucket starts full on day 1"
+        {
+          "id": "dual_kc",
+          "text": "States Annex 8 uses the dual Kc (Kcb + Ke) procedure, not single Kc",
+          "check": "judge"
+        },
+        {
+          "id": "dry_beans",
+          "text": "Notes the example crop is dry beans, not tomato/pepper",
+          "check": "regex_all",
+          "patterns": [
+            "(?i)bean"
+          ]
+        },
+        {
+          "id": "not_numeric_oracle",
+          "text": "Advises against comparing daily Kc/ETc/depletion numbers directly; use structure/logic instead",
+          "check": "judge"
+        },
+        {
+          "id": "trigger_refill",
+          "text": "Identifies the comparable logic: trigger at RAW/allowable depletion and refill to field capacity",
+          "check": "judge"
+        },
+        {
+          "id": "pitfall_detail",
+          "text": "Names at least one concrete source pitfall (Box 8.1 typos/wrong column, Kcb end 0.23 vs 0.25, or numbers only shown for the first days / rest only as a graph)",
+          "check": "judge"
+        },
+        {
+          "id": "no_fabrication",
+          "text": "Does not invent specific Annex 8 schedule totals (season irrigation total, dates) presented as source facts",
+          "check": "judge"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "tomato-late-stress-with-rain",
+      "prompt": "Tomato late season, today's Kc is 0.90. Silt loam, FC 0.30 and WP 0.15, roots at 0.7 m. Root zone started today 50 mm depleted; we got 3 mm of rain this morning (no runoff) and ET0 is 7.5 mm. What's actual crop water use today, end-of-day depletion, and tomorrow's net irrigation? Show steps.",
+      "expected_output": "TAW 105; ETc 6.75; p 0.33; RAW 34.65; rain counted (3 > 1.5); Ks 0.782 from start-of-day Dr (or 0.825 if after-rain Dr, stated); ETc adj 5.28; Dr 52.28; irrigate ~52.3 mm.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "taw",
+          "text": "TAW = 105 mm",
+          "check": "number",
+          "value": 105,
+          "tol": 0.05
+        },
+        {
+          "id": "p_adj",
+          "text": "p adjusted to 0.33",
+          "check": "number",
+          "value": 0.33,
+          "tol": 0.001
+        },
+        {
+          "id": "raw",
+          "text": "RAW 34.65 mm",
+          "check": "number",
+          "value": 34.65,
+          "tol": 0.03
+        },
+        {
+          "id": "rain_counted",
+          "text": "Counts the 3 mm rain (above 0.2 x ET0 = 1.5 mm)",
+          "check": "judge"
+        },
+        {
+          "id": "ks_convention",
+          "text": "Ks consistent with a stated depletion convention (0.782 start-of-day, or 0.825 after morning rain) and names which",
+          "check": "judge"
+        },
+        {
+          "id": "dr_end",
+          "text": "End-of-day depletion about 52.28 mm (or 52.57 under the after-rain convention)",
+          "check": "judge"
+        },
+        {
+          "id": "irrigation",
+          "text": "Net irrigation equals end-of-day depletion (refill to field capacity)",
+          "check": "judge"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "pepper-drip-stage-ambiguity",
+      "prompt": "Bell pepper on drip (wetted fraction 0.4), Europe/Mediterranean Apr-Jun planting, FAO-56 Table 11 stages and Table 12 Kc. Climate is standard (u2 2 m/s, RHmin 45%). What Kc should we use on season days 30, 100 and 120?",
+      "expected_output": "Kc ini 0.6 x 0.4 = 0.24; no climate adjustment (term = 0); Kc mid 1.05, end 0.90 unscaled by fw. Flags initial stage printed 25/30. With 30: 0.24, 1.05, 0.9375. With 25: 0.356, 1.05, 0.90.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "kc_ini",
+          "text": "Kc ini = 0.6 x 0.4 = 0.24",
+          "check": "number",
+          "value": 0.24,
+          "tol": 0.001
+        },
+        {
+          "id": "ambiguity",
+          "text": "Flags that the initial stage is printed '25/30' and states which was used (or gives both)",
+          "check": "judge"
+        },
+        {
+          "id": "day120",
+          "text": "Day 120 Kc 0.9375 (30-d initial) or 0.90 (25-d initial), consistent with the stated choice",
+          "check": "judge"
+        },
+        {
+          "id": "no_climate",
+          "text": "Recognises the climate adjustment is zero at u2 2 / RHmin 45",
+          "check": "judge"
+        },
+        {
+          "id": "no_fw_mid",
+          "text": "Does not scale Kc mid/end by fw",
+          "check": "judge"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "review-teammate-calc",
+      "prompt": "A teammate wrote this for pepper on drip and asked me to review it against FAO-56:\n\n```python\ndef tomorrow_irrigation(dr_start, et0, rain, taw, fw=0.35):\n    kc = 1.05 * fw            # drip only wets part of the field\n    etc = kc * et0\n    dr_end = dr_start - rain + etc\n    raw = 0.30 * taw\n    ks = 1.0 if dr_end <= raw else (taw - dr_end) / (0.7 * taw)\n    return max(dr_end, 0) if dr_end > raw else 0\n```\n\nWhat's wrong with it? Keep it to the FAO-56 issues.",
+      "expected_output": "fw must only scale Kc ini, not Kc mid; p must be adjusted with ETc and clamped; Ks should use start-of-day depletion and must actually be applied (ETc adj = Ks Kc ET0, Eq. 81) before dr_end; Dr not clamped to [0, TAW] and DP missing; 0.7 hard-codes 1-p; small-rain cutoff/runoff; suggest reuse of irrigation.py.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "fw",
+          "text": "Flags that fw should not scale Kc mid (only Kc ini, Eq. 60)",
+          "check": "judge"
+        },
+        {
+          "id": "p",
+          "text": "Flags missing p adjustment for ETc (and 0.1-0.8 clamp)",
+          "check": "judge"
+        },
+        {
+          "id": "ks_unused",
+          "text": "Flags that Ks is computed but never applied to ETc (Eq. 81)",
+          "check": "judge"
+        },
+        {
+          "id": "ks_timing",
+          "text": "Flags Ks computed from end-of-day instead of start-of-day depletion",
+          "check": "judge"
+        },
+        {
+          "id": "clamp_dp",
+          "text": "Flags missing 0..TAW clamp / deep percolation (Eq. 86/88)",
+          "check": "judge"
+        }
       ]
     }
   ]

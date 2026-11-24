@@ -2,7 +2,7 @@
 
 import pytest
 
-from irrigation import application_rate_mm_h, bucket_day, litres, run_minutes
+from irrigation import application_rate_mm_h, bucket_day, effective_rain, litres, run_minutes
 
 # Case 4 plot: sand 83 mm/m, Zr 0.7 m, 1500 m2, rows 1.5 m, emitters 0.4 m, 0.6 L/h.
 TAW = 83 * 0.7
@@ -66,22 +66,22 @@ def test_seven_day_example_from_the_task():
     assert needs[5] == pytest.approx(42.0)  # level 28 after ET, refilled to 70
 
 
-def test_dry_start_floors_level_so_need_is_exactly_taw():
-    # Case 6: dry (level 0), ETc 5.75
+def test_empty_bucket_floors_level_so_need_is_exactly_taw():
+    # Empty bucket (level 0), ETc 5.75. Not a soil_state start any more: dry is at the trigger.
     day = bucket_day(0.0, TAW, 0.0, ETC)
     assert day.need_mm == pytest.approx(TAW)
     assert day.level_end == pytest.approx(TAW)
 
 
-def test_dry_start_with_et_larger_than_taw_still_needs_exactly_taw():
+def test_empty_bucket_with_et_larger_than_taw_still_needs_exactly_taw():
     assert bucket_day(0.0, TAW, 0.0, 100.0).need_mm == pytest.approx(TAW)
 
 
-def test_dry_start_rain_is_counted():
+def test_empty_bucket_rain_is_counted():
     assert bucket_day(0.0, TAW, 40.0, ETC).level_end == pytest.approx(34.25)
 
 
-def test_dry_start_rain_beyond_full_is_capped_at_taw():
+def test_empty_bucket_rain_beyond_full_is_capped_at_taw():
     day = bucket_day(0.0, TAW, 100.0, ETC)
     assert day.need_mm == 0.0
     assert day.level_end == pytest.approx(TAW)
@@ -130,3 +130,13 @@ def test_no_cap_by_default_refills_in_one_day():
     day = bucket_day(0.0, TAW, 0.0, ETC_4)
     assert day.need_mm == pytest.approx(TAW)
     assert day.refilling is False
+
+
+def test_rain_below_a_fifth_of_et0_is_ignored():
+    # FAO-56 Ch. 8: rain below about 0.2 x ET0 is usually ignored (skill case 3: 0.6 mm at ET0 4).
+    assert effective_rain(0.6, 4.0) == 0.0
+
+
+def test_rain_at_or_above_a_fifth_of_et0_counts_in_full():
+    assert effective_rain(0.8, 4.0) == pytest.approx(0.8)
+    assert effective_rain(25.0, 4.0) == pytest.approx(25.0)

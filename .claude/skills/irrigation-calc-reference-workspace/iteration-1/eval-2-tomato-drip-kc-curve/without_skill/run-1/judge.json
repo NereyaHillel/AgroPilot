@@ -1,0 +1,6 @@
+{
+ "no_fw_mid": [
+  true,
+  "'Only Kc ini is scaled. Kc mid and Kc end are not scaled by fw.'"
+ ]
+}

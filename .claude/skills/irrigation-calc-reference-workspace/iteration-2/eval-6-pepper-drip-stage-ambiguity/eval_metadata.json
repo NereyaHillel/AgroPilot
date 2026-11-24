@@ -1,0 +1,12 @@
+{
+  "eval_id": 6,
+  "eval_name": "pepper-drip-stage-ambiguity",
+  "prompt": "Bell pepper on drip (wetted fraction 0.4), Europe/Mediterranean Apr-Jun planting, FAO-56 Table 11 stages and Table 12 Kc. Climate is standard (u2 2 m/s, RHmin 45%). What Kc should we use on season days 30, 100 and 120?",
+  "assertions": [
+    "Kc ini = 0.6 x 0.4 = 0.24",
+    "Flags that the initial stage is printed '25/30' and states which was used (or gives both)",
+    "Day 120 Kc 0.9375 (30-d initial) or 0.90 (25-d initial), consistent with the stated choice",
+    "Recognises the climate adjustment is zero at u2 2 / RHmin 45",
+    "Does not scale Kc mid/end by fw"
+  ]
+}

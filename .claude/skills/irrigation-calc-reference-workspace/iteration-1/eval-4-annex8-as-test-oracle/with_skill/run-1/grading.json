@@ -1,0 +1,40 @@
+{
+  "expectations": [
+    {
+      "text": "States Annex 8 uses the dual Kc (Kcb + Ke) procedure, not single Kc",
+      "passed": true,
+      "evidence": "'dual-Kc example (Kcb + Ke ...)'"
+    },
+    {
+      "text": "Notes the example crop is dry beans, not tomato/pepper",
+      "passed": true,
+      "evidence": "all patterns found"
+    },
+    {
+      "text": "Advises against comparing daily Kc/ETc/depletion numbers directly; use structure/logic instead",
+      "passed": true,
+      "evidence": "'shouldn't be used as a day-by-day numeric oracle, only for checking structure'"
+    },
+    {
+      "text": "Identifies the comparable logic: trigger at RAW/allowable depletion and refill to field capacity",
+      "passed": true,
+      "evidence": "trigger when depletion exceeds allowable depletion, refill to FC"
+    },
+    {
+      "text": "Names at least one concrete source pitfall (Box 8.1 typos/wrong column, Kcb end 0.23 vs 0.25, or numbers only shown for the first days / rest only as a graph)",
+      "passed": true,
+      "evidence": "Box 8.1 typos, footnote 9 AK vs AL, Kcb end 0.23; only 15-27 May published"
+    },
+    {
+      "text": "Does not invent specific Annex 8 schedule totals (season irrigation total, dates) presented as source facts",
+      "passed": true,
+      "evidence": "'The text gives no total depth, count or dates'"
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1.0
+  }
+}

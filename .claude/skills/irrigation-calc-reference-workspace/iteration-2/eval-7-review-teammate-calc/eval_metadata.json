@@ -1,0 +1,12 @@
+{
+  "eval_id": 7,
+  "eval_name": "review-teammate-calc",
+  "prompt": "A teammate wrote this for pepper on drip and asked me to review it against FAO-56:\n\n```python\ndef tomorrow_irrigation(dr_start, et0, rain, taw, fw=0.35):\n    kc = 1.05 * fw            # drip only wets part of the field\n    etc = kc * et0\n    dr_end = dr_start - rain + etc\n    raw = 0.30 * taw\n    ks = 1.0 if dr_end <= raw else (taw - dr_end) / (0.7 * taw)\n    return max(dr_end, 0) if dr_end > raw else 0\n```\n\nWhat's wrong with it? Keep it to the FAO-56 issues.",
+  "assertions": [
+    "Flags that fw should not scale Kc mid (only Kc ini, Eq. 60)",
+    "Flags missing p adjustment for ETc (and 0.1-0.8 clamp)",
+    "Flags that Ks is computed but never applied to ETc (Eq. 81)",
+    "Flags Ks computed from end-of-day instead of start-of-day depletion",
+    "Flags missing 0..TAW clamp / deep percolation (Eq. 86/88)"
+  ]
+}

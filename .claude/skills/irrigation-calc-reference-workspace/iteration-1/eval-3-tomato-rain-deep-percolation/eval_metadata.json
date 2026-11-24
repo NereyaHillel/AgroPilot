@@ -1,0 +1,13 @@
+{
+  "eval_id": 3,
+  "eval_name": "tomato-rain-deep-percolation",
+  "prompt": "Tomato, full cover (Kc 1.15), sandy loam with FC 0.23 and WP 0.10, root zone 0.7 m. Start of day 1 depletion is 12 mm. Day 1: ET0 4 mm, 25 mm of rain, assume no runoff. Day 2: ET0 4 mm, 0.6 mm of drizzle. Run the FAO-56 root-zone water balance for both days: depletion at end of each day, deep percolation, and whether either day calls for irrigation.",
+  "assertions": [
+    "TAW = 91 mm",
+    "RAW about 37.86 mm with p adjusted to 0.416",
+    "Day 1 deep percolation 8.4 mm (Eq. 88)",
+    "Day 1 end depletion is 0 (clamped, Eq. 86)",
+    "Flags that 0.6 mm is below 0.2 x ET0 and is usually ignored (Dr day 2 = 4.6 mm)",
+    "Concludes no irrigation is needed on either day"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+ "dual_kc": [
+  true,
+  "'dual-Kc (Kcb + Ke) example for dry beans'"
+ ],
+ "not_numeric_oracle": [
+  true,
+  "'doesn't work as a day-by-day oracle for numbers'; compare formulas/step order"
+ ],
+ "trigger_refill": [
+  true,
+  "'irrigate next morning when depletion goes above allowable depletion, refilling to FC'"
+ ],
+ "pitfall_detail": [
+  true,
+  "formula-box typos; only 15-27 May shown"
+ ],
+ "no_fabrication": [
+  true,
+  "'The text doesn't state the season's total irrigation or the irrigation dates'"
+ ]
+}

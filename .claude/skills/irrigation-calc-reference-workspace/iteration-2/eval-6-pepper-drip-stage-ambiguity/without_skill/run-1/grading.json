@@ -1,0 +1,35 @@
+{
+  "expectations": [
+    {
+      "text": "Kc ini = 0.6 x 0.4 = 0.24",
+      "passed": false,
+      "evidence": "no number within 0.001 of 0.24"
+    },
+    {
+      "text": "Flags that the initial stage is printed '25/30' and states which was used (or gives both)",
+      "passed": true,
+      "evidence": "Reading A (30) / Reading B (25)"
+    },
+    {
+      "text": "Day 120 Kc 0.9375 (30-d initial) or 0.90 (25-d initial), consistent with the stated choice",
+      "passed": true,
+      "evidence": "0.9375 / 0.90"
+    },
+    {
+      "text": "Recognises the climate adjustment is zero at u2 2 / RHmin 45",
+      "passed": true,
+      "evidence": "adjustment is zero"
+    },
+    {
+      "text": "Does not scale Kc mid/end by fw",
+      "passed": true,
+      "evidence": "fw doesn't change Kc mid/end"
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 1,
+    "total": 5,
+    "pass_rate": 0.8
+  }
+}

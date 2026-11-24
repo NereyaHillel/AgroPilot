@@ -1,0 +1,14 @@
+{
+  "eval_id": 2,
+  "eval_name": "tomato-drip-kc-curve",
+  "prompt": "Tomato on drip (wetted fraction 0.35), Mediterranean April planting, use the FAO-56 Table 11 Mediterranean stage lengths and Kc end 0.80. Mid and late season both average u2 = 3 m/s, RHmin = 30%, plant height 0.6 m. Give me the Kc values the planner should use on season days 20, 50 and 140, with the equations.",
+  "assertions": [
+    "Uses Table 11 Mediterranean stages 30/40/45/30",
+    "Kc ini = 0.6 x 0.35 = 0.21 (Eq. 60)",
+    "Climate-adjusted Kc mid about 1.21 (Eq. 62)",
+    "Climate-adjusted Kc end about 0.86 (Eq. 65)",
+    "Day 50 Kc about 0.711",
+    "Day 140 Kc about 0.920",
+    "Does not scale Kc mid or Kc end by the wetted fraction (only Kc ini)"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+ "rain_counted": [
+  true,
+  "3 mm counted, above 0.2 x ET0 = 1.5 mm"
+ ],
+ "ks_convention": [
+  true,
+  "start-of-day Ks 0.7818; Annex 8 alternative 0.824 named"
+ ],
+ "dr_end": [
+  true,
+  "52.28 mm"
+ ],
+ "irrigation": [
+  true,
+  "52.28 mm refill to FC"
+ ]
+}

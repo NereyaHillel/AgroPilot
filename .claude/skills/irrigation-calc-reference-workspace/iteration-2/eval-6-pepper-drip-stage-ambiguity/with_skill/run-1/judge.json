@@ -1,0 +1,18 @@
+{
+ "ambiguity": [
+  true,
+  "table with both 25 d and 30 d readings; recommends 30"
+ ],
+ "day120": [
+  true,
+  "0.90 (25 d) / 0.9375 (30 d)"
+ ],
+ "no_climate": [
+  true,
+  "Eq. 62/65 correction is zero"
+ ],
+ "no_fw_mid": [
+  true,
+  "Kc mid/end not multiplied by fw"
+ ]
+}

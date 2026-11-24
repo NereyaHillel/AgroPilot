@@ -1,0 +1,18 @@
+{
+ "rain_counted": [
+  true,
+  "50 - 3 + 5.28; rain counted (no 0.2 x ET0 rule cited)"
+ ],
+ "ks_convention": [
+  true,
+  "'Ks uses start-of-day depletion'"
+ ],
+ "dr_end": [
+  true,
+  "52.28 mm"
+ ],
+ "irrigation": [
+  true,
+  "~52.3 mm refill to FC"
+ ]
+}

@@ -1,0 +1,14 @@
+{
+ "dr1_zero": [
+  true,
+  "Day 1 end 0 mm (field capacity)"
+ ],
+ "small_rain": [
+  true,
+  "Ignored 0.6 mm as below 0.2 x ET0 (0.8 mm); 4.0 if counted"
+ ],
+ "no_irrigation": [
+  true,
+  "Irrigate? No for both days"
+ ]
+}

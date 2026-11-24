@@ -1,0 +1,40 @@
+{
+  "expectations": [
+    {
+      "text": "TAW = 91 mm",
+      "passed": true,
+      "evidence": "found 91.0"
+    },
+    {
+      "text": "RAW about 37.86 mm with p adjusted to 0.416",
+      "passed": true,
+      "evidence": "found 37.9"
+    },
+    {
+      "text": "Day 1 deep percolation 8.4 mm (Eq. 88)",
+      "passed": true,
+      "evidence": "found 8.4"
+    },
+    {
+      "text": "Day 1 end depletion is 0 (clamped, Eq. 86)",
+      "passed": true,
+      "evidence": "Day 1 end 0 mm (field capacity)"
+    },
+    {
+      "text": "Flags that 0.6 mm is below 0.2 x ET0 and is usually ignored (Dr day 2 = 4.6 mm)",
+      "passed": true,
+      "evidence": "Ignored 0.6 mm as below 0.2 x ET0 (0.8 mm); 4.0 if counted"
+    },
+    {
+      "text": "Concludes no irrigation is needed on either day",
+      "passed": true,
+      "evidence": "Irrigate? No for both days"
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1.0
+  }
+}

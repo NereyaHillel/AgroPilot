@@ -1,0 +1,22 @@
+{
+ "dual_kc": [
+  true,
+  "'dual-Kc example (Kcb + Ke ...)'"
+ ],
+ "not_numeric_oracle": [
+  true,
+  "'shouldn't be used as a day-by-day numeric oracle, only for checking structure'"
+ ],
+ "trigger_refill": [
+  true,
+  "trigger when depletion exceeds allowable depletion, refill to FC"
+ ],
+ "pitfall_detail": [
+  true,
+  "Box 8.1 typos, footnote 9 AK vs AL, Kcb end 0.23; only 15-27 May published"
+ ],
+ "no_fabrication": [
+  true,
+  "'The text gives no total depth, count or dates'"
+ ]
+}

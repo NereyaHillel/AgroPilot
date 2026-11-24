@@ -1,45 +1,50 @@
 {
   "expectations": [
     {
-      "text": "Reports TAW = 72 mm",
+      "text": "TAW = 65 mm (Eq. 82)",
       "passed": true,
-      "evidence": "TAW = 72.0 mm"
+      "evidence": "found 65"
     },
     {
-      "text": "Adjusts p for ETc (p = 0.30 + 0.04 x (5 - ETc) = 0.248) instead of using the table p of 0.30 unchanged",
+      "text": "p adjusted for ETc to about 0.227 (not left at 0.30)",
       "passed": true,
-      "evidence": "p = 0.248 via 0.30+0.04(5-6.3)"
+      "evidence": "found 0.227"
     },
     {
-      "text": "Reports RAW of about 17.9 mm (not 21.6)",
+      "text": "RAW about 14.75 mm",
       "passed": true,
-      "evidence": "RAW 17.86 mm"
+      "evidence": "found 14.75"
     },
     {
-      "text": "Reports Ks of about 0.78 (0.77-0.78)",
+      "text": "Ks about 0.697 from Eq. 84",
       "passed": true,
-      "evidence": "Ks 0.776"
+      "evidence": "found 0.6966"
     },
     {
-      "text": "Reports stressed ETc of about 4.9 mm/day",
+      "text": "Actual (stressed) crop water use about 4.75 mm",
       "passed": true,
-      "evidence": "Stressed ETc 4.89"
+      "evidence": "found 4.75"
     },
     {
-      "text": "Reports end-of-day depletion of about 34.9 mm and recommends irrigating about 34.9 mm net",
+      "text": "End-of-day depletion about 34.75 mm",
       "passed": true,
-      "evidence": "Dr 34.89, irrigate 34.89 mm net"
+      "evidence": "found 34.75"
     },
     {
-      "text": "States the assumption about which depletion value (start-of-day) feeds Ks and which Kc mid (1.05) and p (0.30) were used",
+      "text": "Cites Eq. 84 (Ks) and Eq. 85 (water balance)",
       "passed": true,
-      "evidence": "Assumptions list start-of-day Dr, Kc mid 1.05, p adjusted with unstressed ETc"
+      "evidence": "all patterns found"
+    },
+    {
+      "text": "Recommends net irrigation equal to the end-of-day depletion (~34.75 mm) to refill to field capacity",
+      "passed": true,
+      "evidence": "'put on about 34.75 mm net, which refills the root zone to field capacity'"
     }
   ],
   "summary": {
-    "passed": 7,
+    "passed": 8,
     "failed": 0,
-    "total": 7,
+    "total": 8,
     "pass_rate": 1.0
   }
 }

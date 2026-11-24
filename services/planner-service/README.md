@@ -15,7 +15,7 @@ A missing `REGISTRY_URL` or `WEATHER_URL` stops startup. `UPSTREAM_TIMEOUT_SECON
 
 ## API
 
-`GET /v1/plots/{id}/plan?soil_state={dry|half|wet}&days={1..7}` (days default 7), starting today. `soil_state` is required: how wet the soil was the day before (dry starts the bucket at 0, half at half, wet at full). `GET /health` returns `{"status": "ok"}`.
+`GET /v1/plots/{id}/plan?soil_state={dry|half|wet}&days={1..7}` (days default 7), starting today. `soil_state` is required: how wet the soil was the day before (dry starts the bucket at the irrigation trigger, 0.5 × TAW; half at 0.75 × TAW; wet at full). `GET /health` returns `{"status": "ok"}`.
 
 Example (tomato on sand, 1500 m2, 0.6 L/h emitters on 1.5 x 0.4 m, forecast of ET0 5.0 mm and no rain):
 

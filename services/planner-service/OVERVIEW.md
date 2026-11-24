@@ -4,7 +4,7 @@ Port **8002**. Answers "should I water this plot today, and for how many minutes
 
 ## Responsibilities
 
-- Serve `GET /v1/plots/{id}/plan?soil_state={dry|half|wet}&days={1..7}` (days default 7), starting today. `soil_state` is required: how wet the soil was the day before, which sets the day-1 starting level (dry 0, half 0.5 × TAW, wet TAW). Index 0 is today's recommendation.
+- Serve `GET /v1/plots/{id}/plan?soil_state={dry|half|wet}&days={1..7}` (days default 7), starting today. `soil_state` is required: how wet the soil was the day before, which sets the day-1 starting level (dry 0.5 × TAW, i.e. at the irrigation trigger; half 0.75 × TAW; wet TAW). Index 0 is today's recommendation.
 - Compute every number with deterministic Python, following FAO-56 and the `irrigation-calc-reference` skill. No AI model is called at runtime.
 - Propagate `stale` from the forecast to every affected day.
 - Fail loudly when an upstream is down. It never returns a plan of zeros.
@@ -36,7 +36,7 @@ For each forecast day:
 2. **Kc** from the growth curve (FAO-56 Eq. 66): flat in the initial and mid stages, linear in development and late stages.
 3. **ETc = Kc × ET0** (the crop's water use).
 4. **Bucket capacity (TAW)** = soil available water (mm per metre) × root depth (m).
-5. **Bucket step:** level = max(0, min(TAW, previous level + rain − ETc)); day 1 starts from the `soil_state` level. If that is **below half of TAW**, irrigate back to full: `need_mm = TAW − level`. Exactly half does not trigger.
+5. **Bucket step:** rain below 0.2 × ET0 is ignored (FAO-56 Ch. 8, "usually ignored"); then level = max(0, min(TAW, previous level + rain − ETc)); day 1 starts from the `soil_state` level. If that is **below half of TAW**, irrigate back to full: `need_mm = TAW − level`. Exactly half does not trigger.
 6. **Litres** = `need_mm × area_m2` (1 mm over 1 m² is 1 litre).
 7. **Run minutes** = `need_mm / application_rate × 60`, where application rate (mm/h) = `flow_lph / (row_spacing_m × emitter_spacing_m)`.
 
@@ -103,5 +103,5 @@ A missing URL stops startup with the variable named.
 - **The starting level is the farmer's answer** (`soil_state`, required). The service is stateless and the registry holds no soil moisture, so it cannot know the real level; a wrong answer gives a wrong first days.
 - **A day runs at most 24 hours.** `need_mm` is capped at 24 h x the application rate. A refill that does not fit stays in progress and continues the next days until the bucket is full, even above the trigger; rain that fills the bucket ends it.
 - **Plots past the end of the season** (all four seed plots) use the crop's end Kc.
-- **Simplifications:** no Ks stress factor and no p adjustment in the plan loop (irrigation triggers before stress), no wind or humidity correction of Kc, no drip scaling of Kc ini, no runoff or capillary rise.
+- **Simplifications:** no Ks stress factor and no p adjustment in the plan loop (irrigation triggers before stress), no wind or humidity correction of Kc, no drip scaling of Kc ini, no runoff or capillary rise. Rain below 0.2 × ET0 is ignored; rain at or above it counts in full.
 - `irrigation.py` also holds the fuller FAO-56 daily step (`daily_soil_step`, with Ks and adjusted p) that the plan loop does not use. Keep it only if it backs the reference cases in the skill.
