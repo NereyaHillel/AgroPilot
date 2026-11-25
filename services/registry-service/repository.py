@@ -147,6 +147,22 @@ def delete_plot(conn: Conn, plot_id: str) -> None:
     conn.execute(text("DELETE FROM plots WHERE id = :id"), {"id": plot_id})
 
 
+def get_plot_photo(conn: Conn, plot_id: str) -> Row | None:
+    return _row(
+        conn, "SELECT key, content_type FROM plot_photos WHERE plot_id = :plot_id", {"plot_id": plot_id}
+    )
+
+
+def upsert_plot_photo(conn: Conn, plot_id: str, key: str, content_type: str) -> None:
+    conn.execute(
+        text(
+            "INSERT INTO plot_photos (plot_id, key, content_type) VALUES (:plot_id, :key, :content_type) "
+            "ON CONFLICT (plot_id) DO UPDATE SET key = excluded.key, content_type = excluded.content_type"
+        ),
+        {"plot_id": plot_id, "key": key, "content_type": content_type},
+    )
+
+
 def list_crops(conn: Conn) -> list[Row]:
     return _rows(conn, f"SELECT id, name FROM crops {order_by_name(conn)}")
 

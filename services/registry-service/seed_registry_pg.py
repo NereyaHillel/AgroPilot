@@ -16,7 +16,7 @@ from sqlalchemy import text
 import config
 import db
 
-TABLES = ("plots", "farms", "crops", "soils", "emitters")
+TABLES = ("plot_photos", "plots", "farms", "crops", "soils", "emitters")
 
 SCHEMA_AND_SEED = """
 CREATE TABLE farms (
@@ -55,6 +55,12 @@ CREATE TABLE plots (
   lat                DOUBLE PRECISION NOT NULL,
   lon                DOUBLE PRECISION NOT NULL,
   UNIQUE (farm_id, name)
+);
+
+CREATE TABLE plot_photos (
+  plot_id       TEXT PRIMARY KEY REFERENCES plots(id) ON DELETE CASCADE,
+  key           TEXT NOT NULL,
+  content_type  TEXT NOT NULL
 );
 
 INSERT INTO crops (id, name) VALUES
