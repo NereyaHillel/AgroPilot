@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=ENV_FILE, extra="ignore", hide_input_in_errors=True)
 
     database_url: str = DEFAULT_SQLITE_URL
+    # Optional: without a bucket the photo routes answer 503. Credentials are never read here;
+    # boto3 finds them itself.
+    aws_s3_bucket: str = ""
+    aws_region: str | None = None
 
     @field_validator("database_url")
     @classmethod
@@ -36,3 +40,8 @@ def database_url(env_file: Path = ENV_FILE) -> str:
     except ValidationError as exc:
         # Re-raise with only the validator's message, never the input value.
         raise ValueError("; ".join(e["msg"].removeprefix("Value error, ") for e in exc.errors())) from None
+
+
+def s3_settings(env_file: Path = ENV_FILE) -> tuple[str, str | None]:
+    settings = Settings(_env_file=env_file)
+    return settings.aws_s3_bucket, settings.aws_region or None

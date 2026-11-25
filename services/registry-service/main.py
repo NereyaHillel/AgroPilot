@@ -12,6 +12,7 @@ from routers import catalogues, farms, plots
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Resolve DATABASE_URL once, so a bad value stops startup instead of failing every request.
     app.state.database_url = config.database_url()
+    app.state.s3_bucket, app.state.aws_region = config.s3_settings()
     yield
 
 

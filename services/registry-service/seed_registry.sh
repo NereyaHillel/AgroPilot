@@ -57,6 +57,12 @@ CREATE TABLE plots (
   UNIQUE (farm_id, name)
 );
 
+CREATE TABLE plot_photos (
+  plot_id       TEXT PRIMARY KEY REFERENCES plots(id) ON DELETE CASCADE,
+  key           TEXT NOT NULL,
+  content_type  TEXT NOT NULL
+);
+
 INSERT INTO crops (id, name) VALUES
   ('tomato', 'Tomato'),
   ('bell-pepper', 'Bell pepper');
